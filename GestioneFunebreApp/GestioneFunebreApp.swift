@@ -1,14 +1,14 @@
 //
-//  GestioneFunebreAppApp.swift
+//  GestioneFunebreApp.swift
 //  GestioneFunebreApp
 //
-//  Created by Marco Lecca on 07/07/25.
+//  Created by Marco Lecca on 08/07/25.
 //
 
 import SwiftUI
 
 @main
-struct GestioneFunebreAppApp: App {
+struct GestioneFunebreApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

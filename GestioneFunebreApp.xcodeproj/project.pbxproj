@@ -6,14 +6,50 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AC06F8F72E1EC50300A6833B /* NuovoDefuntoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8F52E1EC33200A6833B /* NuovoDefuntoView.swift */; };
+		AC06F8FB2E20286A00A6833B /* CalcolatoreCodiceFiscale.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8FA2E20285E00A6833B /* CalcolatoreCodiceFiscale.swift */; };
+		AC06F8FD2E2028DF00A6833B /* ManagerGestioneDefunti.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */; };
+		AC06F9012E20F23400A6833B /* ExportUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F9002E20F22700A6833B /* ExportUtilities.swift */; };
+		AC06F9092E255AD500A6833B /* GestioneDefuntiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F9082E255ACA00A6833B /* GestioneDefuntiView.swift */; };
+		AC06F90D2E25664E00A6833B /* GestioneMezziView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F90C2E25664800A6833B /* GestioneMezziView.swift */; };
+		AC06F9102E279C2400A6833B /* AppDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F90F2E279BFC00A6833B /* AppDesign.swift */; };
+		AC06F91B2E279D8A00A6833B /* MezziManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F91A2E279D8600A6833B /* MezziManager.swift */; };
+		AC06F9242E27B08700A6833B /* FamiliareUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F9232E27B07C00A6833B /* FamiliareUtilities.swift */; };
+		AC874C0F2E1D773200632CA6 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF8C5362E1BDCAB006900AA /* LoginView.swift */; };
+		ACF8C5542E1C1FA0006900AA /* AccessoOperatoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF8C5372E1BDCB3006900AA /* AccessoOperatoreView.swift */; };
+		ACF8C5702E1D140E006900AA /* ProgressIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF8C56F2E1D13FE006900AA /* ProgressIndicatorView.swift */; };
+		ACF8C5722E1D14AA006900AA /* CampoInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF8C5712E1D14A3006900AA /* CampoInput.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		AC06F8F52E1EC33200A6833B /* NuovoDefuntoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuovoDefuntoView.swift; sourceTree = "<group>"; };
+		AC06F8FA2E20285E00A6833B /* CalcolatoreCodiceFiscale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcolatoreCodiceFiscale.swift; sourceTree = "<group>"; };
+		AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagerGestioneDefunti.swift; sourceTree = "<group>"; };
+		AC06F9002E20F22700A6833B /* ExportUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportUtilities.swift; sourceTree = "<group>"; };
+		AC06F9082E255ACA00A6833B /* GestioneDefuntiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestioneDefuntiView.swift; sourceTree = "<group>"; };
+		AC06F90C2E25664800A6833B /* GestioneMezziView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestioneMezziView.swift; sourceTree = "<group>"; };
+		AC06F90F2E279BFC00A6833B /* AppDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDesign.swift; sourceTree = "<group>"; };
+		AC06F91A2E279D8600A6833B /* MezziManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MezziManager.swift; sourceTree = "<group>"; };
+		AC06F9232E27B07C00A6833B /* FamiliareUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamiliareUtilities.swift; sourceTree = "<group>"; };
 		ACF8C51C2E1BDC35006900AA /* GestioneFunebreApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GestioneFunebreApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACF8C5362E1BDCAB006900AA /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		ACF8C5372E1BDCB3006900AA /* AccessoOperatoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoOperatoreView.swift; sourceTree = "<group>"; };
+		ACF8C53C2E1BDCEA006900AA /* comuni_italiani.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = comuni_italiani.swift; sourceTree = "<group>"; };
+		ACF8C53E2E1BDD01006900AA /* UtilitiesPdfUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilitiesPdfUtils.swift; sourceTree = "<group>"; };
+		ACF8C56F2E1D13FE006900AA /* ProgressIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressIndicatorView.swift; sourceTree = "<group>"; };
+		ACF8C5712E1D14A3006900AA /* CampoInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampoInput.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ACF8C51E2E1BDC35006900AA /* GestioneFunebreApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = GestioneFunebreApp;
+			sourceTree = "<group>";
+		};
+		ACF8C54F2E1BDF20006900AA /* Model */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Model;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -29,10 +65,72 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AC06F90E2E279BC000A6833B /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				AC06F90F2E279BFC00A6833B /* AppDesign.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		AC06F9142E279C8300A6833B /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		AC06F9152E279C8F00A6833B /* Defunti */ = {
+			isa = PBXGroup;
+			children = (
+				AC06F8F52E1EC33200A6833B /* NuovoDefuntoView.swift */,
+				AC06F9082E255ACA00A6833B /* GestioneDefuntiView.swift */,
+			);
+			path = Defunti;
+			sourceTree = "<group>";
+		};
+		AC06F9162E279CAE00A6833B /* Mezzi */ = {
+			isa = PBXGroup;
+			children = (
+				AC06F90C2E25664800A6833B /* GestioneMezziView.swift */,
+			);
+			path = Mezzi;
+			sourceTree = "<group>";
+		};
+		AC06F9172E279CB800A6833B /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		AC06F91C2E27A27800A6833B /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		AC874C122E1D7A4500632CA6 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				AC06F9232E27B07C00A6833B /* FamiliareUtilities.swift */,
+				AC06F9002E20F22700A6833B /* ExportUtilities.swift */,
+				AC06F8FA2E20285E00A6833B /* CalcolatoreCodiceFiscale.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
 		ACF8C5132E1BDC35006900AA = {
 			isa = PBXGroup;
 			children = (
 				ACF8C51E2E1BDC35006900AA /* GestioneFunebreApp */,
+				AC06F90E2E279BC000A6833B /* Design */,
+				ACF8C52C2E1BDC50006900AA /* View */,
+				ACF8C54F2E1BDF20006900AA /* Model */,
+				ACF8C52D2E1BDC56006900AA /* Managers */,
+				AC874C122E1D7A4500632CA6 /* Utilities */,
+				ACF8C52E2E1BDC5B006900AA /* Resources */,
 				ACF8C51D2E1BDC35006900AA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,6 +141,40 @@
 				ACF8C51C2E1BDC35006900AA /* GestioneFunebreApp.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		ACF8C52C2E1BDC50006900AA /* View */ = {
+			isa = PBXGroup;
+			children = (
+				AC06F91C2E27A27800A6833B /* Shared */,
+				AC06F9142E279C8300A6833B /* Dashboard */,
+				AC06F9152E279C8F00A6833B /* Defunti */,
+				AC06F9162E279CAE00A6833B /* Mezzi */,
+				AC06F9172E279CB800A6833B /* Auth */,
+				ACF8C5712E1D14A3006900AA /* CampoInput.swift */,
+				ACF8C56F2E1D13FE006900AA /* ProgressIndicatorView.swift */,
+				ACF8C5372E1BDCB3006900AA /* AccessoOperatoreView.swift */,
+				ACF8C5362E1BDCAB006900AA /* LoginView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		ACF8C52D2E1BDC56006900AA /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				AC06F91A2E279D8600A6833B /* MezziManager.swift */,
+				AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		ACF8C52E2E1BDC5B006900AA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				ACF8C53E2E1BDD01006900AA /* UtilitiesPdfUtils.swift */,
+				ACF8C53C2E1BDCEA006900AA /* comuni_italiani.swift */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -62,6 +194,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				ACF8C51E2E1BDC35006900AA /* GestioneFunebreApp */,
+				ACF8C54F2E1BDF20006900AA /* Model */,
 			);
 			name = GestioneFunebreApp;
 			packageProductDependencies = (
@@ -82,6 +215,7 @@
 				TargetAttributes = {
 					ACF8C51B2E1BDC35006900AA = {
 						CreatedOnToolsVersion = 16.4;
+						LastSwiftMigration = 1640;
 					};
 				};
 			};
@@ -119,6 +253,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC06F9242E27B08700A6833B /* FamiliareUtilities.swift in Sources */,
+				ACF8C5702E1D140E006900AA /* ProgressIndicatorView.swift in Sources */,
+				AC06F8F72E1EC50300A6833B /* NuovoDefuntoView.swift in Sources */,
+				AC06F8FD2E2028DF00A6833B /* ManagerGestioneDefunti.swift in Sources */,
+				AC06F9012E20F23400A6833B /* ExportUtilities.swift in Sources */,
+				AC06F9102E279C2400A6833B /* AppDesign.swift in Sources */,
+				AC06F91B2E279D8A00A6833B /* MezziManager.swift in Sources */,
+				AC874C0F2E1D773200632CA6 /* LoginView.swift in Sources */,
+				ACF8C5722E1D14AA006900AA /* CampoInput.swift in Sources */,
+				AC06F90D2E25664E00A6833B /* GestioneMezziView.swift in Sources */,
+				AC06F8FB2E20286A00A6833B /* CalcolatoreCodiceFiscale.swift in Sources */,
+				ACF8C5542E1C1FA0006900AA /* AccessoOperatoreView.swift in Sources */,
+				AC06F9092E255AD500A6833B /* GestioneDefuntiView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -250,7 +397,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GestioneFunebreApp/GestioneFunebreApp.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -258,6 +407,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -268,6 +418,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "GestioneFunebreApp/GestioneFunebreApp-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -277,7 +429,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GestioneFunebreApp/GestioneFunebreApp.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -285,6 +439,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -295,6 +450,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "GestioneFunebreApp/GestioneFunebreApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
