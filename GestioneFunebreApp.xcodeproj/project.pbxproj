@@ -51,9 +51,22 @@
 		ACF8C5712E1D14A3006900AA /* CampoInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampoInput.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		59F9043E2E2A5282007C5B86 /* Exceptions for "GestioneFunebreApp" folder in "GestioneFunebreApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = ACF8C51B2E1BDC35006900AA /* GestioneFunebreApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ACF8C51E2E1BDC35006900AA /* GestioneFunebreApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				59F9043E2E2A5282007C5B86 /* Exceptions for "GestioneFunebreApp" folder in "GestioneFunebreApp" target */,
+			);
 			path = GestioneFunebreApp;
 			sourceTree = "<group>";
 		};
@@ -427,6 +440,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GestioneFunebreApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FunerApp;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -460,6 +474,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GestioneFunebreApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FunerApp;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
