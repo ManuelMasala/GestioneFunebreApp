@@ -11,10 +11,21 @@ struct GestioneMezziView: View {
     @StateObject private var mezziManager = MezziManager()
     @State private var showingNuovoMezzo = false
     @State private var mezzoSelezionato: Mezzo?
-    @State private var showingModificaMezzo = false
     @State private var filtroStato: StatoMezzo?
     @State private var filtroTipo: TipoProprietaMezzo?
     @State private var searchText = ""
+    
+    // Computed property per determinare se mostrare la sheet
+    private var shouldShowModificaMezzo: Binding<Bool> {
+        Binding(
+            get: { mezzoSelezionato != nil },
+            set: { newValue in
+                if !newValue {
+                    mezzoSelezionato = nil
+                }
+            }
+        )
+    }
     
     var mezziFiltrati: [Mezzo] {
         var risultato = mezziManager.mezzi
@@ -83,25 +94,19 @@ struct GestioneMezziView: View {
                 mezziManager.aggiungiMezzo(nuovoMezzo)
             }
         }
-        .sheet(isPresented: $showingModificaMezzo) {
+        .sheet(isPresented: shouldShowModificaMezzo) {
             if let mezzo = mezzoSelezionato {
                 ModificaMezzoView(
                     mezzo: mezzo,
                     onSave: { mezzoAggiornato in
                         print("🔧 Aggiornando mezzo: \(mezzoAggiornato.targa) - Tipo: \(mezzoAggiornato.tipoProprietà.rawValue)")
                         mezziManager.aggiornaMezzo(mezzoAggiornato)
-                        // Reset selezione dopo aggiornamento
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            mezzoSelezionato = nil
-                        }
+                        mezzoSelezionato = nil
                     },
                     onDelete: { mezzoEliminato in
                         print("🗑️ Eliminando mezzo: \(mezzoEliminato.targa)")
                         mezziManager.eliminaMezzo(mezzoEliminato)
-                        // Reset selezione dopo eliminazione
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            mezzoSelezionato = nil
-                        }
+                        mezzoSelezionato = nil
                     }
                 )
             }
@@ -342,8 +347,19 @@ struct GestioneMezziView: View {
                         MezzoCardCompatta(
                             mezzo: mezzo,
                             onTap: {
-                                mezzoSelezionato = mezzo
-                                showingModificaMezzo = true
+                                // Debug del click
+                                print("🖱️ Click su mezzo: \(mezzo.targa)")
+                                
+                                // Reset precedente selezione se esiste
+                                if mezzoSelezionato != nil {
+                                    mezzoSelezionato = nil
+                                }
+                                
+                                // Piccolo delay per assicurare il reset
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    mezzoSelezionato = mezzo
+                                    print("✅ Mezzo selezionato: \(mezzo.targa)")
+                                }
                             },
                             onDelete: { mezzoEliminato in
                                 print("🗑️ Eliminando mezzo da card: \(mezzoEliminato.targa)")
@@ -487,7 +503,6 @@ struct MezzoCardCompatta: View {
     let mezzo: Mezzo
     let onTap: () -> Void
     let onDelete: ((Mezzo) -> Void)?
-    @State private var isPressed = false
     @State private var showingDeleteAlert = false
     
     init(mezzo: Mezzo, onTap: @escaping () -> Void, onDelete: ((Mezzo) -> Void)? = nil) {
@@ -523,19 +538,16 @@ struct MezzoCardCompatta: View {
                             Image(systemName: "trash")
                                 .font(.caption)
                                 .foregroundColor(.red)
+                                .padding(4)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
             }
             
-            // Icona e info base
-            Button(action: {
-                // Aggiungi un piccolo delay per evitare conflitti
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    onTap()
-                }
-            }) {
+            // Contenuto principale - un unico button per tutto
+            VStack(spacing: 12) {
+                // Icona e info base
                 HStack(spacing: 16) {
                     Image(systemName: "car.2.fill")
                         .font(.system(size: 32))
@@ -626,17 +638,16 @@ struct MezzoCardCompatta: View {
                     .cornerRadius(6)
                 }
             }
-            .buttonStyle(PlainButtonStyle())
         }
         .padding()
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(.easeInOut(duration: 0.1), value: isPressed)
-        .onLongPressGesture(minimumDuration: 0.0, maximumDistance: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
+        .contentShape(Rectangle()) // Importante per gestire il tap
+        .onTapGesture {
+            print("🔄 Gesture tap su \(mezzo.targa)")
+            onTap()
+        }
         .alert("Elimina Mezzo", isPresented: $showingDeleteAlert) {
             Button("Elimina", role: .destructive) {
                 onDelete?(mezzo)
