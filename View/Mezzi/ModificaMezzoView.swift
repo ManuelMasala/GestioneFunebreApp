@@ -15,10 +15,12 @@ struct ModificaMezzoView: View {
     @State private var showingDeleteAlert = false
     
     let onSave: (Mezzo) -> Void
+    let onDelete: ((Mezzo) -> Void)?
     
-    init(mezzo: Mezzo, onSave: @escaping (Mezzo) -> Void) {
+    init(mezzo: Mezzo, onSave: @escaping (Mezzo) -> Void, onDelete: ((Mezzo) -> Void)? = nil) {
         self._mezzo = State(initialValue: mezzo)
         self.onSave = onSave
+        self.onDelete = onDelete
     }
     
     var body: some View {
@@ -49,9 +51,18 @@ struct ModificaMezzoView: View {
                 }
                 
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Salva") {
-                        onSave(mezzo)
-                        dismiss()
+                    HStack {
+                        if onDelete != nil {
+                            Button("Elimina") {
+                                showingDeleteAlert = true
+                            }
+                            .foregroundColor(.red)
+                        }
+                        
+                        Button("Salva") {
+                            onSave(mezzo)
+                            dismiss()
+                        }
                     }
                 }
             }
@@ -65,12 +76,12 @@ struct ModificaMezzoView: View {
         }
         .alert("Elimina Mezzo", isPresented: $showingDeleteAlert) {
             Button("Elimina", role: .destructive) {
-                // Implementa eliminazione
+                onDelete?(mezzo)
                 dismiss()
             }
             Button("Annulla", role: .cancel) { }
         } message: {
-            Text("Sei sicuro di voler eliminare questo mezzo? L'azione non può essere annullata.")
+            Text("Sei sicuro di voler eliminare il mezzo \(mezzo.targa)? Questa azione non può essere annullata.\n\nSaranno eliminate anche tutte le manutenzioni associate.")
         }
     }
     

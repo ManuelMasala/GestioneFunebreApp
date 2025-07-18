@@ -85,10 +85,25 @@ struct GestioneMezziView: View {
         }
         .sheet(isPresented: $showingModificaMezzo) {
             if let mezzo = mezzoSelezionato {
-                ModificaMezzoView(mezzo: mezzo) { mezzoAggiornato in
-                    print("🔧 Aggiornando mezzo: \(mezzoAggiornato.targa) - Tipo: \(mezzoAggiornato.tipoProprietà.rawValue)")
-                    mezziManager.aggiornaMezzo(mezzoAggiornato)
-                }
+                ModificaMezzoView(
+                    mezzo: mezzo,
+                    onSave: { mezzoAggiornato in
+                        print("🔧 Aggiornando mezzo: \(mezzoAggiornato.targa) - Tipo: \(mezzoAggiornato.tipoProprietà.rawValue)")
+                        mezziManager.aggiornaMezzo(mezzoAggiornato)
+                        // Reset selezione dopo aggiornamento
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            mezzoSelezionato = nil
+                        }
+                    },
+                    onDelete: { mezzoEliminato in
+                        print("🗑️ Eliminando mezzo: \(mezzoEliminato.targa)")
+                        mezziManager.eliminaMezzo(mezzoEliminato)
+                        // Reset selezione dopo eliminazione
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            mezzoSelezionato = nil
+                        }
+                    }
+                )
             }
         }
     }
@@ -324,10 +339,17 @@ struct GestioneMezziView: View {
                     GridItem(.adaptive(minimum: 280), spacing: 16)
                 ], spacing: 16) {
                     ForEach(mezziFiltrati) { mezzo in
-                        MezzoCardCompatta(mezzo: mezzo) {
-                            mezzoSelezionato = mezzo
-                            showingModificaMezzo = true
-                        }
+                        MezzoCardCompatta(
+                            mezzo: mezzo,
+                            onTap: {
+                                mezzoSelezionato = mezzo
+                                showingModificaMezzo = true
+                            },
+                            onDelete: { mezzoEliminato in
+                                print("🗑️ Eliminando mezzo da card: \(mezzoEliminato.targa)")
+                                mezziManager.eliminaMezzo(mezzoEliminato)
+                            }
+                        )
                     }
                 }
             }
@@ -464,18 +486,27 @@ struct EmptyStateView: View {
 struct MezzoCardCompatta: View {
     let mezzo: Mezzo
     let onTap: () -> Void
+    let onDelete: ((Mezzo) -> Void)?
+    @State private var isPressed = false
+    @State private var showingDeleteAlert = false
+    
+    init(mezzo: Mezzo, onTap: @escaping () -> Void, onDelete: ((Mezzo) -> Void)? = nil) {
+        self.mezzo = mezzo
+        self.onTap = onTap
+        self.onDelete = onDelete
+    }
     
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 12) {
-                // Header con targa e stato
-                HStack {
-                    Text(mezzo.targa)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                    
-                    Spacer()
-                    
+        VStack(spacing: 12) {
+            // Header con targa e stato
+            HStack {
+                Text(mezzo.targa)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                HStack(spacing: 8) {
                     Text(mezzo.stato.rawValue)
                         .font(.caption2)
                         .fontWeight(.semibold)
@@ -484,9 +515,27 @@ struct MezzoCardCompatta: View {
                         .background(mezzo.stato.color.opacity(0.2))
                         .foregroundColor(mezzo.stato.color)
                         .cornerRadius(6)
+                    
+                    if onDelete != nil {
+                        Button(action: {
+                            showingDeleteAlert = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                 }
-                
-                // Icona e info base
+            }
+            
+            // Icona e info base
+            Button(action: {
+                // Aggiungi un piccolo delay per evitare conflitti
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    onTap()
+                }
+            }) {
                 HStack(spacing: 16) {
                     Image(systemName: "car.2.fill")
                         .font(.system(size: 32))
@@ -577,12 +626,25 @@ struct MezzoCardCompatta: View {
                     .cornerRadius(6)
                 }
             }
-            .padding()
-            .background(Color.white)
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+            .buttonStyle(PlainButtonStyle())
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .animation(.easeInOut(duration: 0.1), value: isPressed)
+        .onLongPressGesture(minimumDuration: 0.0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
+        .alert("Elimina Mezzo", isPresented: $showingDeleteAlert) {
+            Button("Elimina", role: .destructive) {
+                onDelete?(mezzo)
+            }
+            Button("Annulla", role: .cancel) { }
+        } message: {
+            Text("Sei sicuro di voler eliminare il mezzo \(mezzo.targa)?")
+        }
     }
 }
 
