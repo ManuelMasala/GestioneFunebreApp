@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		59F904312E29784A007C5B86 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904302E297843007C5B86 /* DashboardView.swift */; };
+		59F904332E297881007C5B86 /* VisteComplementari.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904322E297867007C5B86 /* VisteComplementari.swift */; };
+		59F904352E2A0350007C5B86 /* NuovoMezzoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904342E2A0349007C5B86 /* NuovoMezzoView.swift */; };
+		59F904372E2A03A3007C5B86 /* ManutenzioniView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904362E2A0396007C5B86 /* ManutenzioniView.swift */; };
+		59F904392E2A03E2007C5B86 /* ModificaMezzoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904382E2A03DB007C5B86 /* ModificaMezzoView.swift */; };
 		AC06F8F72E1EC50300A6833B /* NuovoDefuntoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8F52E1EC33200A6833B /* NuovoDefuntoView.swift */; };
 		AC06F8FB2E20286A00A6833B /* CalcolatoreCodiceFiscale.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8FA2E20285E00A6833B /* CalcolatoreCodiceFiscale.swift */; };
 		AC06F8FD2E2028DF00A6833B /* ManagerGestioneDefunti.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */; };
@@ -23,6 +28,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		59F904302E297843007C5B86 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		59F904322E297867007C5B86 /* VisteComplementari.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisteComplementari.swift; sourceTree = "<group>"; };
+		59F904342E2A0349007C5B86 /* NuovoMezzoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuovoMezzoView.swift; sourceTree = "<group>"; };
+		59F904362E2A0396007C5B86 /* ManutenzioniView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManutenzioniView.swift; sourceTree = "<group>"; };
+		59F904382E2A03DB007C5B86 /* ModificaMezzoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModificaMezzoView.swift; sourceTree = "<group>"; };
 		AC06F8F52E1EC33200A6833B /* NuovoDefuntoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuovoDefuntoView.swift; sourceTree = "<group>"; };
 		AC06F8FA2E20285E00A6833B /* CalcolatoreCodiceFiscale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcolatoreCodiceFiscale.swift; sourceTree = "<group>"; };
 		AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagerGestioneDefunti.swift; sourceTree = "<group>"; };
@@ -76,6 +86,7 @@
 		AC06F9142E279C8300A6833B /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				59F904302E297843007C5B86 /* DashboardView.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -92,6 +103,9 @@
 		AC06F9162E279CAE00A6833B /* Mezzi */ = {
 			isa = PBXGroup;
 			children = (
+				59F904382E2A03DB007C5B86 /* ModificaMezzoView.swift */,
+				59F904362E2A0396007C5B86 /* ManutenzioniView.swift */,
+				59F904342E2A0349007C5B86 /* NuovoMezzoView.swift */,
 				AC06F90C2E25664800A6833B /* GestioneMezziView.swift */,
 			);
 			path = Mezzi;
@@ -107,6 +121,7 @@
 		AC06F91C2E27A27800A6833B /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				59F904322E297867007C5B86 /* VisteComplementari.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -259,9 +274,14 @@
 				AC06F8FD2E2028DF00A6833B /* ManagerGestioneDefunti.swift in Sources */,
 				AC06F9012E20F23400A6833B /* ExportUtilities.swift in Sources */,
 				AC06F9102E279C2400A6833B /* AppDesign.swift in Sources */,
+				59F904392E2A03E2007C5B86 /* ModificaMezzoView.swift in Sources */,
 				AC06F91B2E279D8A00A6833B /* MezziManager.swift in Sources */,
+				59F904312E29784A007C5B86 /* DashboardView.swift in Sources */,
+				59F904372E2A03A3007C5B86 /* ManutenzioniView.swift in Sources */,
 				AC874C0F2E1D773200632CA6 /* LoginView.swift in Sources */,
 				ACF8C5722E1D14AA006900AA /* CampoInput.swift in Sources */,
+				59F904352E2A0350007C5B86 /* NuovoMezzoView.swift in Sources */,
+				59F904332E297881007C5B86 /* VisteComplementari.swift in Sources */,
 				AC06F90D2E25664E00A6833B /* GestioneMezziView.swift in Sources */,
 				AC06F8FB2E20286A00A6833B /* CalcolatoreCodiceFiscale.swift in Sources */,
 				ACF8C5542E1C1FA0006900AA /* AccessoOperatoreView.swift in Sources */,
