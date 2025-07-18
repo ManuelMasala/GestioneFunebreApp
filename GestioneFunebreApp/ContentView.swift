@@ -208,7 +208,7 @@ struct MainAppView: View {
                 case .contabilita:
                     ContabilitaModernaView()
                 case .mezzi:
-                    MezziModerniView()
+                    GestioneMezziView()
                 case .inventario:
                     InventarioModernoView()
                 case .fornitori:
