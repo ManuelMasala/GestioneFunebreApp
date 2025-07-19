@@ -4,7 +4,6 @@
 //
 //  Created by Marco Lecca on 07/07/25.
 //
-
 import SwiftUI
 
 struct ContentView: View {
@@ -33,6 +32,7 @@ struct MainAppView: View {
     enum AppSection: String, CaseIterable {
         case dashboard = "Dashboard"
         case defunti = "Defunti"
+        case documenti = "Documenti"  // ← NUOVO
         case contabilita = "Contabilità"
         case mezzi = "Mezzi"
         case inventario = "Inventario"
@@ -42,6 +42,7 @@ struct MainAppView: View {
             switch self {
             case .dashboard: return "house.fill"
             case .defunti: return "person.3.fill"
+            case .documenti: return "doc.text.fill"  // ← NUOVO
             case .contabilita: return "creditcard.fill"
             case .mezzi: return "car.2.fill"
             case .inventario: return "archivebox.fill"
@@ -53,6 +54,7 @@ struct MainAppView: View {
             switch self {
             case .dashboard: return .blue
             case .defunti: return .purple
+            case .documenti: return .mint  // ← NUOVO
             case .contabilita: return .green
             case .mezzi: return .orange
             case .inventario: return .indigo
@@ -64,6 +66,7 @@ struct MainAppView: View {
             switch self {
             case .dashboard: return [.blue, .cyan]
             case .defunti: return [.purple, .pink]
+            case .documenti: return [.mint, .teal]  // ← NUOVO
             case .contabilita: return [.green, .mint]
             case .mezzi: return [.orange, .yellow]
             case .inventario: return [.indigo, .purple]
@@ -205,6 +208,8 @@ struct MainAppView: View {
                     DashboardView()
                 case .defunti:
                     GestioneDefuntiView()
+                case .documenti:  // ← NUOVO CASO
+                    SezioneGenerazioneDocumentiView()
                 case .contabilita:
                     ContabilitaModernaView()
                 case .mezzi:

@@ -7,11 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		592911142E2B7D1D00CC6DA5 /* FileManagerTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 592911132E2B7D1500CC6DA5 /* FileManagerTemplate.swift */; };
+		5929111F2E2B86DA00CC6DA5 /* SezioneGenerazioneDocumentiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5929111E2E2B86CF00CC6DA5 /* SezioneGenerazioneDocumentiView.swift */; };
 		59F904312E29784A007C5B86 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904302E297843007C5B86 /* DashboardView.swift */; };
 		59F904332E297881007C5B86 /* VisteComplementari.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904322E297867007C5B86 /* VisteComplementari.swift */; };
 		59F904352E2A0350007C5B86 /* NuovoMezzoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904342E2A0349007C5B86 /* NuovoMezzoView.swift */; };
 		59F904372E2A03A3007C5B86 /* ManutenzioniView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904362E2A0396007C5B86 /* ManutenzioniView.swift */; };
 		59F904392E2A03E2007C5B86 /* ModificaMezzoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904382E2A03DB007C5B86 /* ModificaMezzoView.swift */; };
+		59F9044D2E2AE207007C5B86 /* SezioneDefuntoTemplateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F9044C2E2AE1FB007C5B86 /* SezioneDefuntoTemplateView.swift */; };
+		59F904562E2AEBE9007C5B86 /* DocumentoGeneratoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904552E2AEBD1007C5B86 /* DocumentoGeneratoView.swift */; };
+		59F9045A2E2AF858007C5B86 /* DocumentoPreviuwView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F904592E2AF83F007C5B86 /* DocumentoPreviuwView.swift */; };
+		59F9045C2E2AF866007C5B86 /* TemplateManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F9045B2E2AF85C007C5B86 /* TemplateManagerView.swift */; };
+		59F9045E2E2AFBB6007C5B86 /* DocumentiManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F9045D2E2AFBA9007C5B86 /* DocumentiManager.swift */; };
 		AC06F8F72E1EC50300A6833B /* NuovoDefuntoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8F52E1EC33200A6833B /* NuovoDefuntoView.swift */; };
 		AC06F8FB2E20286A00A6833B /* CalcolatoreCodiceFiscale.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8FA2E20285E00A6833B /* CalcolatoreCodiceFiscale.swift */; };
 		AC06F8FD2E2028DF00A6833B /* ManagerGestioneDefunti.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */; };
@@ -28,11 +35,19 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		592911132E2B7D1500CC6DA5 /* FileManagerTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManagerTemplate.swift; sourceTree = "<group>"; };
+		592911152E2B7F4E00CC6DA5 /* SezioneGenerazioneDocumentiView_OLD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SezioneGenerazioneDocumentiView_OLD.swift; sourceTree = "<group>"; };
+		5929111E2E2B86CF00CC6DA5 /* SezioneGenerazioneDocumentiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SezioneGenerazioneDocumentiView.swift; sourceTree = "<group>"; };
 		59F904302E297843007C5B86 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		59F904322E297867007C5B86 /* VisteComplementari.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisteComplementari.swift; sourceTree = "<group>"; };
 		59F904342E2A0349007C5B86 /* NuovoMezzoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuovoMezzoView.swift; sourceTree = "<group>"; };
 		59F904362E2A0396007C5B86 /* ManutenzioniView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManutenzioniView.swift; sourceTree = "<group>"; };
 		59F904382E2A03DB007C5B86 /* ModificaMezzoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModificaMezzoView.swift; sourceTree = "<group>"; };
+		59F9044C2E2AE1FB007C5B86 /* SezioneDefuntoTemplateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SezioneDefuntoTemplateView.swift; sourceTree = "<group>"; };
+		59F904552E2AEBD1007C5B86 /* DocumentoGeneratoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentoGeneratoView.swift; sourceTree = "<group>"; };
+		59F904592E2AF83F007C5B86 /* DocumentoPreviuwView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentoPreviuwView.swift; sourceTree = "<group>"; };
+		59F9045B2E2AF85C007C5B86 /* TemplateManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManagerView.swift; sourceTree = "<group>"; };
+		59F9045D2E2AFBA9007C5B86 /* DocumentiManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentiManager.swift; sourceTree = "<group>"; };
 		AC06F8F52E1EC33200A6833B /* NuovoDefuntoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuovoDefuntoView.swift; sourceTree = "<group>"; };
 		AC06F8FA2E20285E00A6833B /* CalcolatoreCodiceFiscale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcolatoreCodiceFiscale.swift; sourceTree = "<group>"; };
 		AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagerGestioneDefunti.swift; sourceTree = "<group>"; };
@@ -88,6 +103,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		59F904442E2ADEB4007C5B86 /* Documenti */ = {
+			isa = PBXGroup;
+			children = (
+				5929111E2E2B86CF00CC6DA5 /* SezioneGenerazioneDocumentiView.swift */,
+				592911152E2B7F4E00CC6DA5 /* SezioneGenerazioneDocumentiView_OLD.swift */,
+				59F9045B2E2AF85C007C5B86 /* TemplateManagerView.swift */,
+				59F904592E2AF83F007C5B86 /* DocumentoPreviuwView.swift */,
+				59F904552E2AEBD1007C5B86 /* DocumentoGeneratoView.swift */,
+				59F9044C2E2AE1FB007C5B86 /* SezioneDefuntoTemplateView.swift */,
+			);
+			path = Documenti;
+			sourceTree = "<group>";
+		};
 		AC06F90E2E279BC000A6833B /* Design */ = {
 			isa = PBXGroup;
 			children = (
@@ -155,7 +183,6 @@
 				ACF8C51E2E1BDC35006900AA /* GestioneFunebreApp */,
 				AC06F90E2E279BC000A6833B /* Design */,
 				ACF8C52C2E1BDC50006900AA /* View */,
-				ACF8C54F2E1BDF20006900AA /* Model */,
 				ACF8C52D2E1BDC56006900AA /* Managers */,
 				AC874C122E1D7A4500632CA6 /* Utilities */,
 				ACF8C52E2E1BDC5B006900AA /* Resources */,
@@ -174,6 +201,8 @@
 		ACF8C52C2E1BDC50006900AA /* View */ = {
 			isa = PBXGroup;
 			children = (
+				59F904442E2ADEB4007C5B86 /* Documenti */,
+				ACF8C54F2E1BDF20006900AA /* Model */,
 				AC06F91C2E27A27800A6833B /* Shared */,
 				AC06F9142E279C8300A6833B /* Dashboard */,
 				AC06F9152E279C8F00A6833B /* Defunti */,
@@ -190,6 +219,8 @@
 		ACF8C52D2E1BDC56006900AA /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				592911132E2B7D1500CC6DA5 /* FileManagerTemplate.swift */,
+				59F9045D2E2AFBA9007C5B86 /* DocumentiManager.swift */,
 				AC06F91A2E279D8600A6833B /* MezziManager.swift */,
 				AC06F8FC2E2028D800A6833B /* ManagerGestioneDefunti.swift */,
 			);
@@ -281,17 +312,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				59F9044D2E2AE207007C5B86 /* SezioneDefuntoTemplateView.swift in Sources */,
+				59F9045C2E2AF866007C5B86 /* TemplateManagerView.swift in Sources */,
 				AC06F9242E27B08700A6833B /* FamiliareUtilities.swift in Sources */,
 				ACF8C5702E1D140E006900AA /* ProgressIndicatorView.swift in Sources */,
 				AC06F8F72E1EC50300A6833B /* NuovoDefuntoView.swift in Sources */,
+				59F904562E2AEBE9007C5B86 /* DocumentoGeneratoView.swift in Sources */,
 				AC06F8FD2E2028DF00A6833B /* ManagerGestioneDefunti.swift in Sources */,
 				AC06F9012E20F23400A6833B /* ExportUtilities.swift in Sources */,
+				592911142E2B7D1D00CC6DA5 /* FileManagerTemplate.swift in Sources */,
 				AC06F9102E279C2400A6833B /* AppDesign.swift in Sources */,
+				59F9045A2E2AF858007C5B86 /* DocumentoPreviuwView.swift in Sources */,
 				59F904392E2A03E2007C5B86 /* ModificaMezzoView.swift in Sources */,
 				AC06F91B2E279D8A00A6833B /* MezziManager.swift in Sources */,
 				59F904312E29784A007C5B86 /* DashboardView.swift in Sources */,
 				59F904372E2A03A3007C5B86 /* ManutenzioniView.swift in Sources */,
 				AC874C0F2E1D773200632CA6 /* LoginView.swift in Sources */,
+				5929111F2E2B86DA00CC6DA5 /* SezioneGenerazioneDocumentiView.swift in Sources */,
+				59F9045E2E2AFBB6007C5B86 /* DocumentiManager.swift in Sources */,
 				ACF8C5722E1D14AA006900AA /* CampoInput.swift in Sources */,
 				59F904352E2A0350007C5B86 /* NuovoMezzoView.swift in Sources */,
 				59F904332E297881007C5B86 /* VisteComplementari.swift in Sources */,
@@ -448,7 +486,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = ManuelMasala.GestioneFunebreApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -482,7 +520,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = ManuelMasala.GestioneFunebreApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
