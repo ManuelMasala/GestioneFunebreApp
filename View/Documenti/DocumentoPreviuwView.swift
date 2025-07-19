@@ -12,6 +12,10 @@ struct DocumentoPreviewView: View {
     let documento: DocumentoCompilato
     @Environment(\.dismiss) private var dismiss
     
+    @State private var showingAlert = false
+    @State private var alertTitle = ""
+    @State private var alertMessage = ""
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -39,6 +43,10 @@ struct DocumentoPreviewView: View {
                         copiaTesto()
                     }
                     
+                    Button("Esporta") {
+                        esportaDocumento()
+                    }
+                    
                     Button("Stampa") {
                         stampaDocumento()
                     }
@@ -49,7 +57,12 @@ struct DocumentoPreviewView: View {
                 }
             }
         }
-        .frame(width: 800, height: 600)
+        .frame(width: 900, height: 700)
+        .alert(alertTitle, isPresented: $showingAlert) {
+            Button("OK") { }
+        } message: {
+            Text(alertMessage)
+        }
     }
     
     // MARK: - Header Section
@@ -258,42 +271,144 @@ struct DocumentoPreviewView: View {
         .cornerRadius(12)
     }
     
-    // MARK: - Actions
+    // MARK: - Actions MIGLIORATE
+    
     private func copiaTesto() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(documento.contenutoFinale, forType: .string)
+        
+        mostraAlert(titolo: "Copiato", messaggio: "Testo copiato negli appunti!")
+    }
+    
+    private func esportaDocumento() {
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.pdf, .plainText]
+        savePanel.canCreateDirectories = true
+        savePanel.isExtensionHidden = false
+        savePanel.title = "Esporta Documento"
+        savePanel.message = "Scegli dove salvare il documento"
+        
+        // Nome file suggerito
+        let nomeFile = "\(documento.template.nome) - \(documento.defunto.cognome)"
+        savePanel.nameFieldStringValue = nomeFile
+        
+        savePanel.begin { response in
+            if response == .OK, let url = savePanel.url {
+                salvaDocumento(url: url)
+            }
+        }
+    }
+    
+    private func salvaDocumento(url: URL) {
+        do {
+            let pathExtension = url.pathExtension.lowercased()
+            
+            switch pathExtension {
+            case "pdf":
+                try creaPDF(url: url)
+                mostraAlert(titolo: "Esportato", messaggio: "PDF salvato in:\n\(url.path)")
+                
+            default:
+                try documento.contenutoFinale.write(to: url, atomically: true, encoding: .utf8)
+                mostraAlert(titolo: "Esportato", messaggio: "File salvato in:\n\(url.path)")
+            }
+        } catch {
+            mostraAlert(titolo: "Errore", messaggio: "Impossibile salvare: \(error.localizedDescription)")
+        }
     }
     
     private func stampaDocumento() {
-        // Implementa funzionalità di stampa
+        // Configurazione stampa migliorata
         let printInfo = NSPrintInfo.shared
+        printInfo.orientation = .portrait
+        printInfo.paperSize = NSMakeSize(595, 842) // A4
         printInfo.topMargin = 50.0
         printInfo.bottomMargin = 50.0
         printInfo.leftMargin = 50.0
         printInfo.rightMargin = 50.0
         
-        let printOperation = NSPrintOperation(view: createPrintView())
-        printOperation.printInfo = printInfo
+        // Crea view per stampa
+        let printView = createPrintView()
+        
+        // Operazione stampa
+        let printOperation = NSPrintOperation(view: printView, printInfo: printInfo)
         printOperation.showsPrintPanel = true
+        printOperation.showsProgressPanel = true
+        printOperation.jobTitle = "\(documento.template.nome) - \(documento.defunto.cognome)"
+        
         printOperation.run()
+        
+        mostraAlert(titolo: "Stampa", messaggio: "Documento inviato alla stampante!")
     }
     
     private func createPrintView() -> NSView {
-        // Crea una view per la stampa
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 595, height: 842)) // A4 size
+        let pageSize = NSMakeSize(595, 842) // A4
+        let view = NSView(frame: NSRect(origin: .zero, size: pageSize))
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor.white.cgColor
         
-        let textView = NSTextView(frame: view.bounds)
+        // Margini
+        let contentRect = NSRect(x: 50, y: 50, width: 495, height: 742)
+        
+        // TextView
+        let textView = NSTextView(frame: contentRect)
         textView.string = documento.contenutoFinale
-        textView.font = NSFont.systemFont(ofSize: 12)
+        textView.font = NSFont(name: "Times New Roman", size: 12) ?? NSFont.systemFont(ofSize: 12)
         textView.isEditable = false
+        textView.isSelectable = false
+        textView.backgroundColor = NSColor.clear
+        textView.textColor = NSColor.black
         
         view.addSubview(textView)
         return view
     }
+    
+    private func creaPDF(url: URL) throws {
+        let pdfData = NSMutableData()
+        
+        guard let dataConsumer = CGDataConsumer(data: pdfData),
+              let pdfContext = CGContext(consumer: dataConsumer, mediaBox: nil, nil) else {
+            throw DocumentError.pdfCreationFailed
+        }
+        
+        let pageRect = CGRect(x: 0, y: 0, width: 595, height: 842)
+        pdfContext.beginPDFPage(nil)
+        
+        // Disegna il testo
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont(name: "Times New Roman", size: 12) ?? NSFont.systemFont(ofSize: 12),
+            .foregroundColor: NSColor.black
+        ]
+        
+        let attributedString = NSAttributedString(string: documento.contenutoFinale, attributes: attributes)
+        let framesetter = CTFramesetterCreateWithAttributedString(attributedString)
+        
+        let textRect = CGRect(x: 50, y: 50, width: 495, height: 742)
+        let path = CGPath(rect: textRect, transform: nil)
+        let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: 0, length: 0), path, nil)
+        
+        // Flip coordinate system for PDF
+        pdfContext.textMatrix = .identity
+        pdfContext.translateBy(x: 0, y: pageRect.height)
+        pdfContext.scaleBy(x: 1, y: -1)
+        
+        CTFrameDraw(frame, pdfContext)
+        
+        pdfContext.endPDFPage()
+        pdfContext.closePDF()
+        
+        try pdfData.write(to: url)
+    }
+    
+    private func mostraAlert(titolo: String, messaggio: String) {
+        alertTitle = titolo
+        alertMessage = messaggio
+        showingAlert = true
+    }
 }
 
-// MARK: - Info Card
+// MARK: - Info Card (invariata)
 struct InfoCard: View {
     let titolo: String
     let valore: String
@@ -330,11 +445,7 @@ struct InfoCard: View {
 #Preview {
     DocumentoPreviewView(
         documento: DocumentoCompilato(
-            template: DocumentoTemplate(
-                nome: "Comunicazione Parrocchia",
-                tipo: .comunicazioneParrocchia,
-                contenuto: "SPETT. Santa Maria\n\nDefunto Mario Rossi\n\nNato in Cagliari il 01/01/1950\n\nDeceduto il 15/07/2024"
-            ),
+            template: DocumentoTemplate.autorizzazioneTrasporto,
             defunto: PersonaDefunta()
         )
     )

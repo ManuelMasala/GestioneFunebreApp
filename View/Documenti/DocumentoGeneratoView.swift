@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct DocumentoGeneretoView: View {
     @State var documento: DocumentoCompilato
@@ -14,6 +15,10 @@ struct DocumentoGeneretoView: View {
     
     @State private var showingSaveAlert = false
     @State private var selectedTab = 0
+    @State private var showingSavePanel = false
+    @State private var showingLocationChoice = false
+    @State private var alertMessage = ""
+    @State private var alertTitle = ""
     
     var body: some View {
         NavigationView {
@@ -71,6 +76,7 @@ struct DocumentoGeneretoView: View {
                 } else {
                     // Azioni
                     VStack(spacing: 20) {
+                        // Stampa
                         Button(action: stampaDocumento) {
                             HStack {
                                 Image(systemName: "printer.fill")
@@ -84,6 +90,7 @@ struct DocumentoGeneretoView: View {
                             .cornerRadius(12)
                         }
                         
+                        // Copia testo
                         Button(action: copiaDocumento) {
                             HStack {
                                 Image(systemName: "doc.on.doc.fill")
@@ -97,15 +104,30 @@ struct DocumentoGeneretoView: View {
                             .cornerRadius(12)
                         }
                         
-                        Button(action: salvaDocumento) {
+                        // Salva nell'app
+                        Button(action: salvaDocumentoNellApp) {
                             HStack {
-                                Image(systemName: "square.and.arrow.down.fill")
-                                Text("Salva Documento")
+                                Image(systemName: "internaldrive.fill")
+                                Text("Salva nell'App")
                                     .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.orange)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        
+                        // Esporta su computer
+                        Button(action: esportaSuComputer) {
+                            HStack {
+                                Image(systemName: "externaldrive.fill")
+                                Text("Esporta su Computer")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.purple)
                             .foregroundColor(.white)
                             .cornerRadius(12)
                         }
@@ -126,29 +148,42 @@ struct DocumentoGeneretoView: View {
                 }
             }
         }
-        .frame(width: 800, height: 600)
-        .alert("Operazione Completata", isPresented: $showingSaveAlert) {
+        .frame(width: 900, height: 700)
+        .alert(alertTitle, isPresented: $showingSaveAlert) {
             Button("OK") { }
         } message: {
-            Text("L'operazione è stata completata con successo!")
+            Text(alertMessage)
         }
     }
     
     // MARK: - Actions
+    
     private func stampaDocumento() {
+        // Configurazione stampa migliorata
         let printInfo = NSPrintInfo.shared
+        printInfo.orientation = .portrait
+        printInfo.paperSize = NSMakeSize(595, 842) // A4
         printInfo.topMargin = 50.0
         printInfo.bottomMargin = 50.0
         printInfo.leftMargin = 50.0
         printInfo.rightMargin = 50.0
+        printInfo.isHorizontallyCentered = false
+        printInfo.isVerticallyCentered = false
         
+        // Crea la view per la stampa
         let printView = createPrintView()
-        let printOperation = NSPrintOperation(view: printView)
+        
+        // Operazione di stampa
+        let printOperation = NSPrintOperation(view: printView, printInfo: printInfo)
         printOperation.printInfo = printInfo
         printOperation.showsPrintPanel = true
+        printOperation.showsProgressPanel = true
+        printOperation.jobTitle = "\(documento.template.nome) - \(documento.defunto.cognome)"
+        
+        // Esegui stampa
         printOperation.run()
         
-        showingSaveAlert = true
+        mostraMessaggio(titolo: "Stampa", messaggio: "Documento inviato alla stampante!")
     }
     
     private func copiaDocumento() {
@@ -156,55 +191,168 @@ struct DocumentoGeneretoView: View {
         pasteboard.clearContents()
         pasteboard.setString(documento.contenutoFinale, forType: .string)
         
-        showingSaveAlert = true
+        mostraMessaggio(titolo: "Copiato", messaggio: "Testo documento copiato negli appunti!")
     }
     
-    private func salvaDocumento() {
+    private func salvaDocumentoNellApp() {
+        // Salva il documento nel sistema interno dell'app
         documento.dataUltimaModifica = Date()
         onSave(documento)
         
-        // Salva anche come file
-        salvaComePDF()
+        mostraMessaggio(titolo: "Salvato", messaggio: "Documento salvato nell'archivio dell'app!")
+    }
+    
+    private func esportaSuComputer() {
+        // Apri il pannello di salvataggio
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.pdf, .plainText]
+        savePanel.canCreateDirectories = true
+        savePanel.isExtensionHidden = false
+        savePanel.allowsOtherFileTypes = false
+        savePanel.title = "Esporta Documento"
+        savePanel.message = "Scegli dove salvare il documento"
+        savePanel.nameFieldLabel = "Nome file:"
         
-        showingSaveAlert = true
+        // Nome file suggerito
+        let nomeFile = "\(documento.template.nome) - \(documento.defunto.cognome)"
+        savePanel.nameFieldStringValue = nomeFile
+        
+        // Mostra il pannello
+        savePanel.begin { response in
+            if response == .OK, let url = savePanel.url {
+                esportaDocumento(url: url)
+            }
+        }
+    }
+    
+    private func esportaDocumento(url: URL) {
+        do {
+            let pathExtension = url.pathExtension.lowercased()
+            
+            switch pathExtension {
+            case "pdf":
+                try creaPDF(url: url)
+                mostraMessaggio(titolo: "Esportato", messaggio: "Documento PDF salvato in:\n\(url.path)")
+                
+            case "txt":
+                try documento.contenutoFinale.write(to: url, atomically: true, encoding: .utf8)
+                mostraMessaggio(titolo: "Esportato", messaggio: "Documento TXT salvato in:\n\(url.path)")
+                
+            default:
+                // Default a PDF se estensione non riconosciuta
+                let pdfURL = url.appendingPathExtension("pdf")
+                try creaPDF(url: pdfURL)
+                mostraMessaggio(titolo: "Esportato", messaggio: "Documento PDF salvato in:\n\(pdfURL.path)")
+            }
+            
+            // Salva anche nell'app dopo esportazione
+            documento.dataUltimaModifica = Date()
+            onSave(documento)
+            
+        } catch {
+            mostraMessaggio(titolo: "Errore", messaggio: "Impossibile salvare il documento:\n\(error.localizedDescription)")
+        }
     }
     
     private func createPrintView() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 595, height: 842)) // A4 size
+        let pageSize = NSMakeSize(595, 842) // A4 in punti
+        let view = NSView(frame: NSRect(origin: .zero, size: pageSize))
         
-        let textView = NSTextView(frame: view.bounds.insetBy(dx: 20, dy: 20))
+        // Margini
+        let margins = NSEdgeInsets(top: 50, left: 50, bottom: 50, right: 50)
+        let contentRect = NSRect(
+            x: margins.left,
+            y: margins.bottom,
+            width: pageSize.width - margins.left - margins.right,
+            height: pageSize.height - margins.top - margins.bottom
+        )
+        
+        // TextView per il contenuto
+        let textView = NSTextView(frame: contentRect)
         textView.string = documento.contenutoFinale
-        textView.font = NSFont.systemFont(ofSize: 12)
+        textView.font = NSFont(name: "Times New Roman", size: 12) ?? NSFont.systemFont(ofSize: 12)
         textView.isEditable = false
+        textView.isSelectable = false
         textView.backgroundColor = NSColor.white
+        textView.textColor = NSColor.black
+        textView.textContainer?.lineFragmentPadding = 0
         
         view.addSubview(textView)
         return view
     }
     
-    private func salvaComePDF() {
-        let savePanel = NSSavePanel()
-        savePanel.allowedContentTypes = [.pdf]
-        savePanel.nameFieldStringValue = "\(documento.template.nome) - \(documento.defunto.cognome).pdf"
-        savePanel.title = "Salva Documento come PDF"
+    private func creaPDF(url: URL) throws {
+        let pdfData = NSMutableData()
         
-        savePanel.begin { response in
-            if response == .OK, let url = savePanel.url {
-                creaPDF(url: url)
-            }
+        // Crea il contesto PDF
+        guard let dataConsumer = CGDataConsumer(data: pdfData),
+              let pdfContext = CGContext(consumer: dataConsumer, mediaBox: nil, nil) else {
+            throw DocumentError.pdfCreationFailed
         }
+        
+        // Dimensioni pagina A4
+        let pageRect = CGRect(x: 0, y: 0, width: 595, height: 842)
+        
+        // Inizia pagina
+        pdfContext.beginPDFPage(nil)
+        
+        // Configura testo
+        pdfContext.textMatrix = .identity
+        pdfContext.translateBy(x: 50, y: 792) // Margine superiore
+        
+        // Disegna il contenuto
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont(name: "Times New Roman", size: 12) ?? NSFont.systemFont(ofSize: 12),
+            .foregroundColor: NSColor.black
+        ]
+        
+        let attributedString = NSAttributedString(string: documento.contenutoFinale, attributes: attributes)
+        let framesetter = CTFramesetterCreateWithAttributedString(attributedString)
+        
+        // Area di testo (con margini)
+        let textRect = CGRect(x: 0, y: -742, width: 495, height: 742)
+        let path = CGPath(rect: textRect, transform: nil)
+        let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: 0, length: 0), path, nil)
+        
+        CTFrameDraw(frame, pdfContext)
+        
+        // Termina pagina e PDF
+        pdfContext.endPDFPage()
+        pdfContext.closePDF()
+        
+        // Salva il file
+        try pdfData.write(to: url)
     }
     
-    private func creaPDF(url: URL) {
-        let pdfView = createPrintView()
-        
-        let pdfData = pdfView.dataWithPDF(inside: pdfView.bounds)
-        
-        do {
-            try pdfData.write(to: url)
-            print("PDF salvato in: \(url.path)")
-        } catch {
-            print("Errore nel salvare il PDF: \(error)")
+    private func mostraMessaggio(titolo: String, messaggio: String) {
+        alertTitle = titolo
+        alertMessage = messaggio
+        showingSaveAlert = true
+    }
+}
+
+// MARK: - Document Error
+enum DocumentError: Error, LocalizedError {
+    case pdfCreationFailed
+    case fileWriteFailed
+    
+    var errorDescription: String? {
+        switch self {
+        case .pdfCreationFailed:
+            return "Impossibile creare il file PDF"
+        case .fileWriteFailed:
+            return "Impossibile scrivere il file"
         }
+    }
+}
+
+#Preview {
+    DocumentoGeneretoView(
+        documento: DocumentoCompilato(
+            template: DocumentoTemplate.autorizzazioneTrasporto,
+            defunto: PersonaDefunta()
+        )
+    ) { _ in
+        print("Documento salvato")
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct SezioneGenerazioneDocumentiView: View {
     @StateObject private var defuntiManager = ManagerGestioneDefunti()
@@ -21,6 +22,9 @@ struct SezioneGenerazioneDocumentiView: View {
     @State private var showingPreview = false
     
     @State private var searchText = ""
+    @State private var showingAlert = false
+    @State private var alertTitle = ""
+    @State private var alertMessage = ""
     
     var body: some View {
         VStack(spacing: 0) {
@@ -43,6 +47,9 @@ struct SezioneGenerazioneDocumentiView: View {
                     
                     // Sezione documenti recenti
                     documentiRecentiSection
+                    
+                    // Sezione statistiche
+                    statisticheSection
                 }
                 .padding()
             }
@@ -53,6 +60,7 @@ struct SezioneGenerazioneDocumentiView: View {
                 DocumentoGeneretoView(documento: documento) { documentoFinale in
                     documentiManager.salvaDocumentoCompilato(documentoFinale)
                     documentoGenerato = nil
+                    mostraAlert(titolo: "Salvato", messaggio: "Documento salvato nell'archivio dell'app!")
                 }
             }
         }
@@ -60,6 +68,11 @@ struct SezioneGenerazioneDocumentiView: View {
             if let documento = documentoGenerato {
                 DocumentoPreviewView(documento: documento)
             }
+        }
+        .alert(alertTitle, isPresented: $showingAlert) {
+            Button("OK") { }
+        } message: {
+            Text(alertMessage)
         }
     }
     
@@ -76,7 +89,7 @@ struct SezioneGenerazioneDocumentiView: View {
                         .font(.title)
                         .fontWeight(.bold)
                     
-                    Text("Compila automaticamente documenti utilizzando i dati di defunti e mezzi")
+                    Text("Sistema avanzato per creare e gestire documenti funebri")
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
@@ -89,21 +102,28 @@ struct SezioneGenerazioneDocumentiView: View {
                         titolo: "Defunti",
                         valore: "\(defuntiManager.defunti.count)",
                         icona: "person.2.fill",
-                        colore: .purple
+                        colore: Color.purple
                     )
                     
                     StatisticCard(
                         titolo: "Mezzi",
                         valore: "\(mezziManager.mezzi.count)",
                         icona: "car.2.fill",
-                        colore: .blue
+                        colore: Color.blue
                     )
                     
                     StatisticCard(
                         titolo: "Template",
                         valore: "\(documentiManager.templates.count)",
                         icona: "doc.circle.fill",
-                        colore: .green
+                        colore: Color.green
+                    )
+                    
+                    StatisticCard(
+                        titolo: "Documenti",
+                        valore: "\(documentiManager.documentiCompilati.count)",
+                        icona: "archivebox.fill",
+                        colore: Color.orange
                     )
                 }
             }
@@ -116,6 +136,36 @@ struct SezioneGenerazioneDocumentiView: View {
                     
                     TextField("Cerca defunti, mezzi o template...", text: $searchText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+                
+                // Azioni rapide
+                HStack(spacing: 8) {
+                    Button("📊 Statistiche") {
+                        mostraStatistiche()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+                    
+                    Button("💾 Backup") {
+                        creaBackup()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.purple.opacity(0.1))
+                    .foregroundColor(.purple)
+                    .cornerRadius(8)
+                    
+                    Button("📁 Cartella") {
+                        apriCartellaDocumenti()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.green.opacity(0.1))
+                    .foregroundColor(.green)
+                    .cornerRadius(8)
                 }
             }
         }
@@ -228,10 +278,18 @@ struct SezioneGenerazioneDocumentiView: View {
     // MARK: - Template Section
     private var templateSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("2. Scegli Template")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.green)
+            HStack {
+                Text("2. Scegli Template")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.green)
+                
+                Spacer()
+                
+                Text("\(templatesFiltrati.count) disponibili")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
             
             LazyVGrid(columns: [
                 GridItem(.adaptive(minimum: 280), spacing: 16)
@@ -280,7 +338,7 @@ struct SezioneGenerazioneDocumentiView: View {
                 Button(action: generaDocumento) {
                     HStack {
                         Image(systemName: "doc.text.fill")
-                        Text("Genera e Compila")
+                        Text("Genera e Modifica")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -320,7 +378,7 @@ struct SezioneGenerazioneDocumentiView: View {
                 
                 Spacer()
                 
-                Text("\(documentiManager.documentiCompilati.count) documenti")
+                Text("\(documentiManager.documentiCompilati.count) totali")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -342,12 +400,43 @@ struct SezioneGenerazioneDocumentiView: View {
                         ForEach(documentiManager.documentiCompilati.prefix(5)) { documento in
                             DocumentoRecenteCard(documento: documento) {
                                 documentoGenerato = documento
-                                showingDocumentoGenerato = true
+                                showingPreview = true
                             }
                         }
                     }
                     .padding(.horizontal)
                 }
+            }
+        }
+        .padding()
+        .background(Color.gray.opacity(0.05))
+        .cornerRadius(12)
+    }
+    
+    // MARK: - Statistiche Section
+    private var statisticheSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Statistiche")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.indigo)
+                
+                Spacer()
+            }
+            
+            let stats = documentiManager.statisticheDocumenti()
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 12) {
+                MiniStatCard(titolo: "Oggi", valore: "\(stats.documentiOggi)", icona: "calendar", colore: .blue)
+                MiniStatCard(titolo: "Settimana", valore: "\(stats.documentiSettimana)", icona: "calendar.badge.clock", colore: .green)
+                MiniStatCard(titolo: "Mese", valore: "\(stats.documentiMese)", icona: "calendar.badge.plus", colore: .orange)
+                MiniStatCard(titolo: "Totali", valore: "\(stats.totaleDocumenti)", icona: "archivebox", colore: .purple)
             }
         }
         .padding()
@@ -403,7 +492,6 @@ struct SezioneGenerazioneDocumentiView: View {
         
         var documento = documentiManager.creaDocumentoCompilato(template: template, defunto: defunto)
         
-        // Se è selezionato un mezzo, aggiungi i dati del mezzo
         if let mezzo = mezzoSelezionato {
             documento.aggiungiDatiMezzo(mezzo)
         }
@@ -438,6 +526,8 @@ struct SezioneGenerazioneDocumentiView: View {
         printOperation.printInfo = printInfo
         printOperation.showsPrintPanel = true
         printOperation.run()
+        
+        mostraAlert(titolo: "Stampa", messaggio: "Documento inviato alla stampante!")
     }
     
     private func creaPrintView(per documento: DocumentoCompilato) -> NSView {
@@ -452,10 +542,47 @@ struct SezioneGenerazioneDocumentiView: View {
         view.addSubview(textView)
         return view
     }
+    
+    private func mostraStatistiche() {
+        let stats = documentiManager.statisticheDocumenti()
+        
+        let messaggio = """
+        📊 Totale: \(stats.totaleDocumenti) documenti
+        📋 Template: \(stats.totaleTemplate) disponibili
+        
+        📅 RECENTI:
+        • Oggi: \(stats.documentiOggi)
+        • Settimana: \(stats.documentiSettimana) 
+        • Mese: \(stats.documentiMese)
+        """
+        
+        mostraAlert(titolo: "Statistiche", messaggio: messaggio)
+    }
+    
+    private func creaBackup() {
+        do {
+            let backupURL = try documentiManager.creaBackup()
+            mostraAlert(titolo: "Backup", messaggio: "Backup salvato in:\n\(backupURL.lastPathComponent)")
+        } catch {
+            mostraAlert(titolo: "Errore", messaggio: "Impossibile creare backup: \(error.localizedDescription)")
+        }
+    }
+    
+    private func apriCartellaDocumenti() {
+        let path = documentiManager.ottieniPathDocumenti()
+        let url = URL(fileURLWithPath: path)
+        NSWorkspace.shared.open(url)
+        mostraAlert(titolo: "Cartella", messaggio: "Cartella documenti aperta nel Finder")
+    }
+    
+    private func mostraAlert(titolo: String, messaggio: String) {
+        alertTitle = titolo
+        alertMessage = messaggio
+        showingAlert = true
+    }
 }
 
 // MARK: - Supporting Views
-
 struct StatisticCard: View {
     let titolo: String
     let valore: String
@@ -481,6 +608,35 @@ struct StatisticCard: View {
         .background(Color.white)
         .cornerRadius(10)
         .shadow(color: .black.opacity(0.1), radius: 2)
+    }
+}
+
+struct MiniStatCard: View {
+    let titolo: String
+    let valore: String
+    let icona: String
+    let colore: Color
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icona)
+                .font(.subheadline)
+                .foregroundColor(colore)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(valore)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                
+                Text(titolo)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(8)
+        .background(Color.white)
+        .cornerRadius(8)
+        .shadow(color: .black.opacity(0.05), radius: 1)
     }
 }
 
@@ -645,24 +801,6 @@ struct DocumentoRecenteCard: View {
             .shadow(color: .black.opacity(0.1), radius: 2)
         }
         .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// MARK: - Extensions per DocumentoCompilato
-extension DocumentoCompilato {
-    mutating func aggiungiDatiMezzo(_ mezzo: Mezzo) {
-        let campiMezzo = [
-            "MEZZO_TARGA": mezzo.targa,
-            "MEZZO_MARCA": mezzo.marca,
-            "MEZZO_MODELLO": mezzo.modello,
-            "MEZZO_KM": mezzo.km,
-            "AUTISTA": "Marco Lecca",
-            "ORARIO_PARTENZA": "ore da definire"
-        ]
-        
-        for (chiave, valore) in campiMezzo {
-            aggiornaCampo(chiave: chiave, valore: valore)
-        }
     }
 }
 

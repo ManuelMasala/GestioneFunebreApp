@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Documento Compilato
 struct DocumentoCompilato: Identifiable, Codable, Hashable {
@@ -48,6 +49,17 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
         return formatter.string(from: dataUltimaModifica)
     }
     
+    var nomeFileConsigliato: String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dataStr = dateFormatter.string(from: dataCreazione)
+        
+        let cognome = defunto.cognome.replacingOccurrences(of: " ", with: "_")
+        let templateNome = template.nome.replacingOccurrences(of: " ", with: "_")
+        
+        return "\(dataStr)_\(templateNome)_\(cognome)"
+    }
+    
     var placeholderNonSostituiti: [String] {
         let pattern = "\\{\\{([A-Z_]+)\\}\\}"
         var placeholder: [String] = []
@@ -71,9 +83,16 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
         return placeholder.sorted()
     }
     
+    var percentualeCompletamento: Double {
+        let totalePlaceholder = template.numeroPlaceholder
+        if totalePlaceholder == 0 { return 100.0 }
+        
+        let placeholderRimasti = placeholderNonSostituiti.count
+        return Double(totalePlaceholder - placeholderRimasti) / Double(totalePlaceholder) * 100.0
+    }
+    
     // MARK: - Methods
     mutating func compilaConDefunto() {
-        // Sostituisce i placeholder con i dati del defunto
         let sostituzioni = [
             "NOME_DEFUNTO": defunto.nome,
             "COGNOME_DEFUNTO": defunto.cognome,
@@ -87,7 +106,8 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
             "NOME_FAMILIARE": defunto.familiareRichiedente.nome,
             "COGNOME_FAMILIARE": defunto.familiareRichiedente.cognome,
             "TELEFONO_FAMILIARE": defunto.familiareRichiedente.telefono,
-            "COMUNE_DECESSO": estraiComune(da: defunto.luogoDecesso.rawValue)
+            "COMUNE_DECESSO": estraiComune(da: defunto.luogoDecesso.rawValue),
+            "NUMERO_CARTELLA": defunto.numeroCartella
         ]
         
         for (chiave, valore) in sostituzioni {
@@ -126,7 +146,6 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
             errori.append("Ci sono ancora \(placeholderMancanti.count) placeholder non sostituiti")
         }
         
-        // Verifica campi obbligatori del template
         for campo in template.campiObbligatori {
             if let valore = valoriCampi[campo.chiave], valore.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 errori.append("Il campo '\(campo.nome)' è obbligatorio")
@@ -136,13 +155,99 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
         return errori
     }
     
-    private func estraiComune(da luogo: String) -> String {
-        // Estrae il comune dal luogo di decesso
+    func esportaComeTestoSemplice() -> String {
+        var output = ""
+        output += "=== \(template.nome) ===\n\n"
+        output += "Defunto: \(defunto.nomeCompleto)\n"
+        output += "Cartella N°: \(defunto.numeroCartella)\n"
+        output += "Data Generazione: \(dataCreazioneFormattata)\n"
+        output += "Operatore: \(operatoreCreazione)\n\n"
+        output += "--- CONTENUTO DOCUMENTO ---\n\n"
+        output += contenutoFinale
+        
+        if !note.isEmpty {
+            output += "\n\n--- NOTE ---\n"
+            output += note
+        }
+        
+        return output
+    }
+    
+    func esportaComeJSON() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        encoder.dateEncodingStrategy = .iso8601
+        return try encoder.encode(self)
+    }
+    
+    func salvaSuFile(url: URL, formato: FormatoEsportazione = .testoSemplice) throws {
+        let contenuto: Data
+        
+        switch formato {
+        case .testoSemplice:
+            contenuto = esportaComeTestoSemplice().data(using: .utf8) ?? Data()
+        case .json:
+            contenuto = try esportaComeJSON()
+        case .csv:
+            let csvContent = "Template,Defunto,Cartella,Data\n\(template.nome),\(defunto.nomeCompleto),\(defunto.numeroCartella),\(dataCreazioneFormattata)"
+            contenuto = csvContent.data(using: .utf8) ?? Data()
+        case .pdf:
+            throw DocumentoError.formatoNonSupportato
+        }
+        
+        try contenuto.write(to: url)
+    }
+    
+    func creaPDF() throws -> Data {
+        let pdfData = NSMutableData()
+        
+        guard let dataConsumer = CGDataConsumer(data: pdfData),
+              let pdfContext = CGContext(consumer: dataConsumer, mediaBox: nil, nil) else {
+            throw DocumentoError.pdfCreationFailed
+        }
+        
+        let pageRect = CGRect(x: 0, y: 0, width: 595, height: 842)
+        pdfContext.beginPDFPage(nil)
+        
+        let headerText = "\(template.nome)\nDefunto: \(defunto.nomeCompleto)\nData: \(dataCreazioneFormattata)\n\n"
+        let fullText = headerText + contenutoFinale
+        
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont(name: "Times New Roman", size: 12) ?? NSFont.systemFont(ofSize: 12),
+            .foregroundColor: NSColor.black
+        ]
+        
+        let attributedString = NSAttributedString(string: fullText, attributes: attributes)
+        let framesetter = CTFramesetterCreateWithAttributedString(attributedString)
+        
+        let textRect = CGRect(x: 50, y: 50, width: 495, height: 742)
+        let path = CGPath(rect: textRect, transform: nil)
+        let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: 0, length: 0), path, nil)
+        
+        pdfContext.textMatrix = .identity
+        pdfContext.translateBy(x: 0, y: pageRect.height)
+        pdfContext.scaleBy(x: 1, y: -1)
+        
+        CTFrameDraw(frame, pdfContext)
+        
+        pdfContext.endPDFPage()
+        pdfContext.closePDF()
+        
+        return pdfData as Data
+    }
+    
+    // MARK: - Funzioni helper
+    func estraiComune(da luogo: String) -> String {
         if luogo.contains("Ospedale") && luogo.contains("Cagliari") {
             return "Cagliari"
+        } else if luogo.contains("Quartu") {
+            return "Quartu Sant'Elena"
+        } else if luogo.contains("Assemini") {
+            return "Assemini"
+        } else if luogo.contains("Pula") {
+            return "Pula"
         }
-        // Aggiungi altre logiche di estrazione se necessarie
-        return "Cagliari" // Default
+        return "Cagliari"
     }
     
     // MARK: - Conformità Hashable
@@ -152,5 +257,153 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
     
     static func == (lhs: DocumentoCompilato, rhs: DocumentoCompilato) -> Bool {
         return lhs.id == rhs.id
+    }
+}
+
+// MARK: - Estensioni per DocumentoCompilato
+extension DocumentoCompilato {
+    mutating func aggiungiDatiMezzo(_ mezzo: Mezzo) {
+        let campiMezzo = [
+            "MEZZO_TARGA": mezzo.targa,
+            "MEZZO_MARCA": mezzo.marca,
+            "MEZZO_MODELLO": mezzo.modello,
+            "MEZZO_KM": mezzo.km,
+            "AUTISTA": "Marco Lecca",
+            "ORARIO_PARTENZA": "ore da definire",
+            "LUOGO_PARTENZA": "da definire"
+        ]
+        
+        for (chiave, valore) in campiMezzo {
+            aggiornaCampo(chiave: chiave, valore: valore)
+        }
+    }
+    
+    mutating func aggiungiSezioneTrasporto(_ testoTrasporto: String) {
+        let pattern = "Dichiara la salma verrà trasportata.*?in data.*?\\."
+        
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+            let range = NSRange(contenutoFinale.startIndex..., in: contenutoFinale)
+            
+            if let match = regex.firstMatch(in: contenutoFinale, range: range) {
+                if let swiftRange = Range(match.range, in: contenutoFinale) {
+                    contenutoFinale = contenutoFinale.replacingCharacters(in: swiftRange, with: testoTrasporto)
+                }
+            } else {
+                contenutoFinale += "\n\n" + testoTrasporto
+            }
+        } catch {
+            contenutoFinale += "\n\n" + testoTrasporto
+        }
+        
+        dataUltimaModifica = Date()
+    }
+    
+    func estraiDatiTrasporto() -> DatiTrasporto? {
+        var dati = DatiTrasporto()
+        
+        let patterns = [
+            ("mezzoETarga", "mezzo auto ([^\\s]+(?:\\s+[^\\s]+)*) condotta"),
+            ("nomeAutista", "condotta da ([^\\s]+(?:\\s+[^\\s]+)*) con partenza"),
+            ("orarioPartenza", "alle ore ([^\\s]+) da"),
+            ("nomeViaOspedale", "da ([^\\s]+(?:\\s+[^\\s]+)*) al"),
+            ("nomeParrocchia", "al ([^\\s]+(?:\\s+[^\\s]+)*) per la funzione"),
+            ("luogoDestinazione", "successivamente al ([^\\s]+(?:\\s+[^\\s]+)*) per la")
+        ]
+        
+        for (campo, pattern) in patterns {
+            do {
+                let regex = try NSRegularExpression(pattern: pattern, options: [])
+                let range = NSRange(contenutoFinale.startIndex..., in: contenutoFinale)
+                
+                if let match = regex.firstMatch(in: contenutoFinale, range: range),
+                   let swiftRange = Range(match.range(at: 1), in: contenutoFinale) {
+                    let valore = String(contenutoFinale[swiftRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    switch campo {
+                    case "mezzoETarga": dati.mezzoETarga = valore
+                    case "nomeAutista": dati.nomeAutista = valore
+                    case "orarioPartenza": dati.orarioPartenza = valore
+                    case "nomeViaOspedale": dati.nomeViaOspedale = valore
+                    case "nomeParrocchia": dati.nomeParrocchia = valore
+                    case "luogoDestinazione": dati.luogoDestinazione = valore
+                    default: break
+                    }
+                }
+            } catch {
+                print("Errore nell'estrazione del campo \(campo): \(error)")
+            }
+        }
+        
+        return dati
+    }
+}
+
+// MARK: - Formato Esportazione
+enum FormatoEsportazione: String, CaseIterable {
+    case testoSemplice = "Testo Semplice (.txt)"
+    case json = "JSON (.json)"
+    case csv = "CSV (.csv)"
+    case pdf = "PDF (.pdf)"
+    
+    var estensione: String {
+        switch self {
+        case .testoSemplice: return "txt"
+        case .json: return "json"
+        case .csv: return "csv"
+        case .pdf: return "pdf"
+        }
+    }
+}
+
+// MARK: - Document Error
+enum DocumentoError: Error, LocalizedError {
+    case pdfCreationFailed
+    case fileWriteFailed
+    case formatoNonSupportato
+    case datiMancanti
+    
+    var errorDescription: String? {
+        switch self {
+        case .pdfCreationFailed:
+            return "Impossibile creare il file PDF"
+        case .fileWriteFailed:
+            return "Impossibile scrivere il file"
+        case .formatoNonSupportato:
+            return "Formato di esportazione non supportato"
+        case .datiMancanti:
+            return "Dati del documento incompleti"
+        }
+    }
+}
+
+// MARK: - Dati Trasporto
+struct DatiTrasporto: Codable {
+    var mezzoETarga: String = ""
+    var nomeAutista: String = "Marco Lecca"
+    var orarioPartenza: String = ""
+    var nomeViaOspedale: String = ""
+    var nomeParrocchia: String = ""
+    var luogoDestinazione: String = ""
+    var tipoSepoltura: String = "tumulazione"
+    var dataTrasporto: Date = Date()
+    var dettagliCremazione: String = ""
+    
+    func generaTesto() -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.locale = Locale(identifier: "it_IT")
+        
+        let dataStr = formatter.string(from: dataTrasporto)
+        
+        var testo = """
+        Dichiara la salma verrà trasportata a mezzo auto \(mezzoETarga) condotta da \(nomeAutista) con partenza alle ore \(orarioPartenza) da \(nomeViaOspedale) al \(nomeParrocchia) per la funzione religiosa e successivamente al \(luogoDestinazione) per la \(tipoSepoltura) in data \(dataStr).
+        """
+        
+        if !dettagliCremazione.isEmpty {
+            testo += " \(dettagliCremazione)"
+        }
+        
+        return testo
     }
 }
