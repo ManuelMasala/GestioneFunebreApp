@@ -8,296 +8,321 @@
 import Foundation
 import SwiftUI
 
+// MARK: - ⭐ DOCUMENTI MANAGER POTENZIATO CON ADOBE - VERSIONE FINALE
+
 class DocumentiManager: ObservableObject {
     @Published var templates: [DocumentoTemplate] = []
     @Published var documentiCompilati: [DocumentoCompilato] = []
     
-    private let documentsDirectory: URL
-    private let templatesDirectory: URL
-    private let documentiDirectory: URL
+    let fileManager = FileManagerDocumenti()
+    let adobeManager = AdobePDFManager.shared
     
-    init() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        documentsDirectory = documentsPath.appendingPathComponent("FunerApp")
-        templatesDirectory = documentsDirectory.appendingPathComponent("Templates")
-        documentiDirectory = documentsDirectory.appendingPathComponent("Documenti")
+    // ✅ RISULTATO ANALISI INTERNO PER EVITARE CONFLITTI
+    struct AnalisiDocumento {
+        let quality: Double
+        let detectedType: TipoDocumento
+        let suggestions: [String]
+        let wordCount: Int
+        let characterCount: Int
+        let lineCount: Int
         
-        creaDirectorySeNecessario()
-        caricaTemplateDefault()
-        caricaDatiSalvati()
-    }
-    
-    // MARK: - Setup Directories
-    private func creaDirectorySeNecessario() {
-        let fileManager = FileManager.default
-        
-        for directory in [documentsDirectory, templatesDirectory, documentiDirectory] {
-            do {
-                try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-                print("📁 Directory creata: \(directory.lastPathComponent)")
-            } catch {
-                print("❌ Errore creazione directory \(directory.lastPathComponent): \(error)")
-            }
+        var qualityDescription: String {
+            if quality > 0.8 { return "Eccellente" }
+            else if quality > 0.6 { return "Buona" }
+            else if quality > 0.4 { return "Discreta" }
+            else { return "Scarsa" }
         }
     }
     
-    // MARK: - Caricamento Template Default
-    private func caricaTemplateDefault() {
-        let templateDefault = [
+    init() {
+        caricaTemplatesPredefiniti()
+        caricaTemplatePersonalizzati()
+        caricaDocumentiSalvati()
+    }
+    
+    // MARK: - ⭐ TEMPLATE MANAGEMENT (ESISTENTE + POTENZIATO)
+    
+    private func caricaTemplatesPredefiniti() {
+        templates = [
             DocumentoTemplate.autorizzazioneTrasporto,
             DocumentoTemplate.comunicazioneParrocchia,
             DocumentoTemplate.checklistFunerale
         ]
+    }
+    
+    // 🔥 NUOVO: Import template con Adobe OCR
+    func importaTemplateConAdobe(da url: URL) async throws -> DocumentoTemplate {
+        // Estrai testo con Adobe OCR
+        let extractedText = try await adobeManager.extractTextFromPDF(fileURL: url)
         
-        for template in templateDefault {
-            if !templates.contains(where: { $0.nome == template.nome }) {
-                templates.append(template)
-            }
-        }
-    }
-    
-    // MARK: - Gestione Template
-    func aggiungiTemplate(_ template: DocumentoTemplate) {
-        templates.append(template)
-        salvaTemplate(template)
-        print("📄 Template aggiunto: \(template.nome)")
-    }
-    
-    func rimuoviTemplate(_ template: DocumentoTemplate) {
-        templates.removeAll { $0.id == template.id }
-        eliminaTemplateFile(template)
-        print("🗑️ Template rimosso: \(template.nome)")
-    }
-    
-    func aggiornaTemplate(_ template: DocumentoTemplate) {
-        if let index = templates.firstIndex(where: { $0.id == template.id }) {
-            var templateAggiornato = template
-            templateAggiornato.dataUltimaModifica = Date()
-            templates[index] = templateAggiornato
-            salvaTemplate(templateAggiornato)
-            print("✏️ Template aggiornato: \(template.nome)")
-        }
-    }
-    
-    func duplicaTemplate(_ template: DocumentoTemplate) -> DocumentoTemplate {
-        var nuovoTemplate = template
-        // Crea nuovo ID invece di assegnare
-        let nuovoID = UUID()
-        nuovoTemplate = DocumentoTemplate(
-            nome: template.nome + " (Copia)",
-            tipo: template.tipo,
-            contenuto: template.contenuto,
-            campiCompilabili: template.campiCompilabili,
+        // Analizza con AI per rilevare tipo
+        let adobeAnalysis = try await adobeManager.analyzeDocument(content: extractedText)
+        
+        // ✅ CORREZIONE: Conversione corretta Adobe → TipoDocumento
+        let detectedType = self.convertAdobeToLocal(adobeAnalysis.detectedType)
+        
+        // Crea template
+        let template = DocumentoTemplate(
+            nome: "Template da \(url.lastPathComponent)",
+            tipo: detectedType,
+            contenuto: extractedText,
+            campiCompilabili: estraiCampiDaContenuto(extractedText),
             isDefault: false,
-            note: template.note,
-            operatoreCreazione: template.operatoreCreazione,
-            versione: template.versione
+            note: "Importato con Adobe OCR - Qualità: \(qualityFromDouble(adobeAnalysis.quality))",
+            operatoreCreazione: "Adobe OCR Import"
         )
         
-        aggiungiTemplate(nuovoTemplate)
-        return nuovoTemplate
+        templates.append(template)
+        return template
     }
     
-    // MARK: - Gestione Documenti Compilati
+    // 🔥 NUOVO: Analizza template esistente
+    func analizzaTemplate(_ template: DocumentoTemplate) async throws -> AnalisiDocumento {
+        // ✅ CORREZIONE: Conversione da Adobe a tipo locale
+        let adobeAnalysis = try await adobeManager.analyzeDocument(content: template.contenuto)
+        
+        let wordCount = template.contenuto.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
+        let characterCount = template.contenuto.count
+        let lineCount = template.contenuto.components(separatedBy: .newlines).count
+        
+        return AnalisiDocumento(
+            quality: adobeAnalysis.quality,
+            detectedType: self.convertAdobeToLocal(adobeAnalysis.detectedType),
+            suggestions: adobeAnalysis.suggestions,
+            wordCount: wordCount,
+            characterCount: characterCount,
+            lineCount: lineCount
+        )
+    }
+    
+    // MARK: - ⭐ DOCUMENTO CREATION (ESISTENTE)
+    
     func creaDocumentoCompilato(template: DocumentoTemplate, defunto: PersonaDefunta) -> DocumentoCompilato {
         var documento = DocumentoCompilato(template: template, defunto: defunto)
         documento.compilaConDefunto()
         return documento
     }
     
+    // MARK: - ⭐ SALVATAGGIO CON FILE SYSTEM (ESISTENTE)
+    
     func salvaDocumentoCompilato(_ documento: DocumentoCompilato) {
-        if let index = documentiCompilati.firstIndex(where: { $0.id == documento.id }) {
-            documentiCompilati[index] = documento
-            print("✏️ Documento aggiornato: \(documento.template.nome)")
-        } else {
-            documentiCompilati.append(documento)
-            print("💾 Documento salvato: \(documento.template.nome)")
-        }
-        salvaDocumento(documento)
-    }
-    
-    func rimuoviDocumentoCompilato(_ documento: DocumentoCompilato) {
-        documentiCompilati.removeAll { $0.id == documento.id }
-        eliminaDocumentoFile(documento)
-        print("🗑️ Documento rimosso: \(documento.template.nome)")
-    }
-    
-    // MARK: - Import/Export Template
-    func importaTemplate(from url: URL) throws {
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        
-        let templateImportato = try decoder.decode(DocumentoTemplate.self, from: data)
-        
-        // Crea nuovo template invece di modificare l'ID
-        var nuovoTemplate = DocumentoTemplate(
-            nome: templateImportato.nome,
-            tipo: templateImportato.tipo,
-            contenuto: templateImportato.contenuto,
-            campiCompilabili: templateImportato.campiCompilabili,
-            isDefault: false,
-            note: templateImportato.note,
-            operatoreCreazione: templateImportato.operatoreCreazione,
-            versione: templateImportato.versione
-        )
-        
-        // Verifica nomi duplicati
-        if templates.contains(where: { $0.nome == nuovoTemplate.nome }) {
-            nuovoTemplate = DocumentoTemplate(
-                nome: templateImportato.nome + " (Importato)",
-                tipo: templateImportato.tipo,
-                contenuto: templateImportato.contenuto,
-                campiCompilabili: templateImportato.campiCompilabili,
-                isDefault: false,
-                note: templateImportato.note,
-                operatoreCreazione: templateImportato.operatoreCreazione,
-                versione: templateImportato.versione
-            )
-        }
-        
-        aggiungiTemplate(nuovoTemplate)
-        print("📥 Template importato: \(nuovoTemplate.nome)")
-    }
-    
-    func esportaTemplate(_ template: DocumentoTemplate) throws -> Data {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        encoder.dateEncodingStrategy = .iso8601
-        return try encoder.encode(template)
-    }
-    
-    func esportaTemplate(_ template: DocumentoTemplate, to url: URL) throws {
-        let data = try esportaTemplate(template)
-        try data.write(to: url)
-        print("📤 Template esportato: \(template.nome)")
-    }
-    
-    // MARK: - Salvataggio/Caricamento File
-    private func salvaTemplate(_ template: DocumentoTemplate) {
         do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            encoder.dateEncodingStrategy = .iso8601
+            let fileURL = try fileManager.salvaDocumentoCompilato(documento)
+            let _ = try fileManager.salvaDocumentoJSON(documento)
             
-            let data = try encoder.encode(template)
-            let fileName = "\(template.id.uuidString).json"
-            let fileURL = templatesDirectory.appendingPathComponent(fileName)
-            
-            try data.write(to: fileURL)
-        } catch {
-            print("❌ Errore salvataggio template: \(error)")
-        }
-    }
-    
-    private func salvaDocumento(_ documento: DocumentoCompilato) {
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            encoder.dateEncodingStrategy = .iso8601
-            
-            let data = try encoder.encode(documento)
-            let fileName = "\(documento.id.uuidString).json"
-            let fileURL = documentiDirectory.appendingPathComponent(fileName)
-            
-            try data.write(to: fileURL)
-        } catch {
-            print("❌ Errore salvataggio documento: \(error)")
-        }
-    }
-    
-    private func eliminaTemplateFile(_ template: DocumentoTemplate) {
-        let fileName = "\(template.id.uuidString).json"
-        let fileURL = templatesDirectory.appendingPathComponent(fileName)
-        
-        do {
-            try FileManager.default.removeItem(at: fileURL)
-        } catch {
-            print("❌ Errore eliminazione template file: \(error)")
-        }
-    }
-    
-    private func eliminaDocumentoFile(_ documento: DocumentoCompilato) {
-        let fileName = "\(documento.id.uuidString).json"
-        let fileURL = documentiDirectory.appendingPathComponent(fileName)
-        
-        do {
-            try FileManager.default.removeItem(at: fileURL)
-        } catch {
-            print("❌ Errore eliminazione documento file: \(error)")
-        }
-    }
-    
-    private func caricaDatiSalvati() {
-        caricaTemplatesSalvati()
-        caricaDocumentiSalvati()
-    }
-    
-    private func caricaTemplatesSalvati() {
-        do {
-            let fileURLs = try FileManager.default.contentsOfDirectory(at: templatesDirectory, includingPropertiesForKeys: nil)
-            let jsonFiles = fileURLs.filter { $0.pathExtension == "json" }
-            
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            
-            for fileURL in jsonFiles {
-                do {
-                    let data = try Data(contentsOf: fileURL)
-                    let template = try decoder.decode(DocumentoTemplate.self, from: data)
-                    
-                    if !templates.contains(where: { $0.id == template.id }) {
-                        templates.append(template)
-                    }
-                } catch {
-                    print("❌ Errore caricamento template \(fileURL.lastPathComponent): \(error)")
-                }
-            }
-            
-            print("📄 Caricati \(jsonFiles.count) template personalizzati")
-        } catch {
-            print("❌ Errore lettura directory templates: \(error)")
-        }
-    }
-    
-    private func caricaDocumentiSalvati() {
-        do {
-            let fileURLs = try FileManager.default.contentsOfDirectory(at: documentiDirectory, includingPropertiesForKeys: nil)
-            let jsonFiles = fileURLs.filter { $0.pathExtension == "json" }
-            
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            
-            for fileURL in jsonFiles {
-                do {
-                    let data = try Data(contentsOf: fileURL)
-                    let documento = try decoder.decode(DocumentoCompilato.self, from: data)
-                    documentiCompilati.append(documento)
-                } catch {
-                    print("❌ Errore caricamento documento \(fileURL.lastPathComponent): \(error)")
-                }
+            if let index = documentiCompilati.firstIndex(where: { $0.id == documento.id }) {
+                documentiCompilati[index] = documento
+            } else {
+                documentiCompilati.append(documento)
             }
             
             documentiCompilati.sort { $0.dataCreazione > $1.dataCreazione }
+            print("✅ Documento salvato: \(fileURL.lastPathComponent)")
             
-            print("📄 Caricati \(jsonFiles.count) documenti salvati")
         } catch {
-            print("❌ Errore lettura directory documenti: \(error)")
+            print("❌ Errore salvataggio: \(error)")
         }
     }
     
-    // MARK: - Ricerca e Filtri
-    func cercaTemplates(query: String) -> [DocumentoTemplate] {
-        if query.isEmpty {
-            return templates
-        }
+    // 🔥 NUOVO: Salva documento con Adobe processing
+    func salvaDocumentoConAdobe(_ documento: DocumentoCompilato, formato: FormatoEsportazione = .testoSemplice) async throws -> URL {
         
-        return templates.filter { template in
-            template.nome.localizedCaseInsensitiveContains(query) ||
-            template.tipo.rawValue.localizedCaseInsensitiveContains(query) ||
-            template.note.localizedCaseInsensitiveContains(query)
+        switch formato {
+        case .pdf:
+            // Genera PDF con Adobe
+            let pdfData = try documento.creaPDF()
+            let fileName = "\(documento.nomeFileConsigliato).pdf"
+            let pdfURL = fileManager.exportFolderURL.appendingPathComponent(fileName)
+            try pdfData.write(to: pdfURL)
+            return pdfURL
+            
+        case .testoSemplice:
+            return try fileManager.salvaDocumentoCompilato(documento)
+            
+        case .json:
+            return try fileManager.salvaDocumentoJSON(documento)
+            
+        case .csv:
+            let csvContent = generaCSV(documento)
+            let fileName = "\(documento.nomeFileConsigliato).csv"
+            let csvURL = fileManager.exportFolderURL.appendingPathComponent(fileName)
+            try csvContent.write(to: csvURL, atomically: true, encoding: .utf8)
+            return csvURL
         }
     }
+    
+    // MARK: - ⭐ CARICAMENTO DA FILE SYSTEM (ESISTENTE)
+    
+    private func caricaDocumentiSalvati() {
+        documentiCompilati = fileManager.caricaDocumentiSalvati()
+        print("📁 Caricati \(documentiCompilati.count) documenti")
+    }
+    
+    func ricaricaDocumenti() {
+        caricaDocumentiSalvati()
+    }
+    
+    // MARK: - ⭐ EXPORT FUNCTIONS (ESISTENTE + POTENZIATO)
+    
+    func esportaPDF(_ documento: DocumentoCompilato) -> URL? {
+        do {
+            return try fileManager.esportaPDF(documento)
+        } catch {
+            print("❌ Errore esportazione PDF: \(error)")
+            return nil
+        }
+    }
+    
+    func esportaWord(_ documento: DocumentoCompilato) -> URL? {
+        do {
+            return try fileManager.esportaWord(documento)
+        } catch {
+            print("❌ Errore esportazione Word: \(error)")
+            return nil
+        }
+    }
+    
+    func esportaPages(_ documento: DocumentoCompilato) -> URL? {
+        do {
+            return try fileManager.esportaPages(documento)
+        } catch {
+            print("❌ Errore esportazione Pages: \(error)")
+            return nil
+        }
+    }
+    
+    func esportaTestoSemplice(_ documento: DocumentoCompilato) -> URL? {
+        do {
+            return try fileManager.salvaDocumentoCompilato(documento)
+        } catch {
+            print("❌ Errore esportazione testo: \(error)")
+            return nil
+        }
+    }
+    
+    // 🔥 NUOVO: Export multiplo con Adobe
+    func esportaTuttiFormatiConAdobe(_ documento: DocumentoCompilato) async throws -> [URL] {
+        var urls: [URL] = []
+        
+        // Export in parallelo per performance migliori
+        async let txtURL = salvaDocumentoConAdobe(documento, formato: .testoSemplice)
+        async let pdfURL = salvaDocumentoConAdobe(documento, formato: .pdf)
+        async let jsonURL = salvaDocumentoConAdobe(documento, formato: .json)
+        async let csvURL = salvaDocumentoConAdobe(documento, formato: .csv)
+        
+        urls.append(try await txtURL)
+        urls.append(try await pdfURL)
+        urls.append(try await jsonURL)
+        urls.append(try await csvURL)
+        
+        return urls
+    }
+    
+    func esportaTuttiFormati(_ documento: DocumentoCompilato) -> [URL] {
+        var urls: [URL] = []
+        
+        if let pdfURL = esportaPDF(documento) { urls.append(pdfURL) }
+        if let wordURL = esportaWord(documento) { urls.append(wordURL) }
+        if let pagesURL = esportaPages(documento) { urls.append(pagesURL) }
+        if let txtURL = esportaTestoSemplice(documento) { urls.append(txtURL) }
+        
+        return urls
+    }
+    
+    // MARK: - ⭐ FILE MANAGEMENT (ESISTENTE)
+    
+    func apriCartellaDocumenti() {
+        fileManager.apriCartellaDocumenti()
+    }
+    
+    func apriCartellaExport() {
+        fileManager.apriCartellaExport()
+    }
+    
+    func ottieniPathDocumenti() -> String {
+        return fileManager.documentiCompilatiFolderURL.path
+    }
+    
+    // MARK: - ⭐ BACKUP AND MAINTENANCE (ESISTENTE + POTENZIATO)
+    
+    func creaBackup() throws -> URL {
+        let backupData = try JSONEncoder().encode(documentiCompilati)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let dataStr = dateFormatter.string(from: Date())
+        
+        let nomeFile = "backup_completo_\(dataStr).json"
+        let backupURL = fileManager.backupFolderURL.appendingPathComponent(nomeFile)
+        
+        try backupData.write(to: backupURL)
+        
+        print("💾 Backup completo creato: \(backupURL.lastPathComponent)")
+        return backupURL
+    }
+    
+    // 🔥 NUOVO: Backup con compressione e metadata
+    func creaBackupCompleto() async throws -> URL {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let dataStr = dateFormatter.string(from: Date())
+        
+        // Usa il metodo del FileManager esistente
+        let backupURL = try fileManager.creaBackupCompleto(documentiCompilati, templates: templates)
+        
+        print("💾 Backup completo Adobe creato: \(backupURL.lastPathComponent)")
+        return backupURL
+    }
+    
+    func eliminaFileVecchi() {
+        do {
+            try fileManager.eliminaFileVecchi(giorniDiMantenimento: 30)
+        } catch {
+            print("❌ Errore eliminazione file vecchi: \(error)")
+        }
+    }
+    
+    // MARK: - ⭐ STATISTICS (ESISTENTE)
+    
+    func statisticheDocumenti() -> (documentiOggi: Int, documentiSettimana: Int, documentiMese: Int, totaleSalvati: Int) {
+        let oggi = Calendar.current.startOfDay(for: Date())
+        let settimanaFa = Calendar.current.date(byAdding: .day, value: -7, to: oggi)!
+        let meseFa = Calendar.current.date(byAdding: .month, value: -1, to: oggi)!
+        
+        let documentiOggi = documentiCompilati.filter {
+            Calendar.current.isDate($0.dataCreazione, inSameDayAs: Date())
+        }.count
+        
+        let documentiSettimana = documentiCompilati.filter {
+            $0.dataCreazione >= settimanaFa
+        }.count
+        
+        let documentiMese = documentiCompilati.filter {
+            $0.dataCreazione >= meseFa
+        }.count
+        
+        return (documentiOggi, documentiSettimana, documentiMese, documentiCompilati.count)
+    }
+    
+    func getStatisticheFiles() -> (totali: Int, dimensione: String) {
+        return fileManager.getStatisticheFiles()
+    }
+    
+    // 🔥 NUOVO: Statistiche Adobe
+    @MainActor
+    func getStatisticheAdobe() -> (elaborazioniOggi: Int, templatesImportati: Int, analisiEffettuate: Int) {
+        let templatesImportati = templates.filter {
+            $0.operatoreCreazione.contains("Adobe")
+        }.count
+        
+        return (
+            elaborazioniOggi: adobeManager.todayOperations,
+            templatesImportati: templatesImportati,
+            analisiEffettuate: adobeManager.totalOperations
+        )
+    }
+    
+    // MARK: - ⭐ SEARCH AND FILTER (ESISTENTE - CORRETTO)
     
     func cercaDocumenti(query: String) -> [DocumentoCompilato] {
         if query.isEmpty {
@@ -305,177 +330,231 @@ class DocumentiManager: ObservableObject {
         }
         
         return documentiCompilati.filter { documento in
-            documento.template.nome.localizedCaseInsensitiveContains(query) ||
+            // ✅ CORRETTO: Accesso diretto alle proprietà
             documento.defunto.nomeCompleto.localizedCaseInsensitiveContains(query) ||
-            documento.defunto.numeroCartella.localizedCaseInsensitiveContains(query)
+            documento.template.nome.localizedCaseInsensitiveContains(query) ||
+            documento.defunto.numeroCartella.contains(query) ||
+            documento.contenutoFinale.localizedCaseInsensitiveContains(query)
         }
     }
     
-    func templatesPerTipo(_ tipo: TipoDocumento) -> [DocumentoTemplate] {
-        return templates.filter { $0.tipo == tipo }
+    func filtraPerTipo(_ tipo: TipoDocumento) -> [DocumentoCompilato] {
+        return documentiCompilati.filter { $0.template.tipo == tipo }
     }
     
-    func documentiPerTemplate(_ template: DocumentoTemplate) -> [DocumentoCompilato] {
-        return documentiCompilati.filter { $0.template.id == template.id }
+    func filtraPerStato(completati: Bool) -> [DocumentoCompilato] {
+        return documentiCompilati.filter { $0.isCompletato == completati }
     }
     
-    func templatesPersonalizzati() -> [DocumentoTemplate] {
-        return templates.filter { !$0.isDefault }
-    }
-    
-    func templatesDefault() -> [DocumentoTemplate] {
-        return templates.filter { $0.isDefault }
-    }
-    
-    // MARK: - Statistiche
-    func statisticheDocumenti() -> StatisticheDocumenti {
-        let oggi = Calendar.current.startOfDay(for: Date())
-        let settimanaFa = Calendar.current.date(byAdding: .day, value: -7, to: oggi)!
-        let meseFa = Calendar.current.date(byAdding: .month, value: -1, to: oggi)!
-        
-        let documentiOggi = documentiCompilati.filter {
-            Calendar.current.isDate($0.dataCreazione, inSameDayAs: oggi)
-        }
-        
-        let documentiSettimana = documentiCompilati.filter {
-            $0.dataCreazione >= settimanaFa
-        }
-        
-        let documentiMese = documentiCompilati.filter {
-            $0.dataCreazione >= meseFa
-        }
-        
-        return StatisticheDocumenti(
-            totaleDocumenti: documentiCompilati.count,
-            totaleTemplate: templates.count,
-            templatePersonalizzati: templatesPersonalizzati().count,
-            documentiOggi: documentiOggi.count,
-            documentiSettimana: documentiSettimana.count,
-            documentiMese: documentiMese.count,
-            templatePiuUsati: templatePiuUtilizzati()
-        )
-    }
-    
-    private func templatePiuUtilizzati() -> [DocumentoTemplate] {
-        let conteggi = Dictionary(grouping: documentiCompilati, by: { $0.template.id })
-            .mapValues { $0.count }
-        
-        return templates
-            .sorted { template1, template2 in
-                let count1 = conteggi[template1.id] ?? 0
-                let count2 = conteggi[template2.id] ?? 0
-                return count1 > count2
-            }
-            .prefix(5)
-            .map { $0 }
-    }
-    
-    // MARK: - Backup e Restore
-    func creaBackup() throws -> URL {
-        let backupData = BackupData(
-            dataCreazione: Date(),
-            versione: "1.4.0",
-            templates: templates,
-            documentiCompilati: documentiCompilati
-        )
-        
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        encoder.dateEncodingStrategy = .iso8601
-        
-        let data = try encoder.encode(backupData)
-        
-        let fileName = "FunerApp_Backup_\(DateFormatter.backupDateFormatter.string(from: Date())).json"
-        let backupURL = documentsDirectory.appendingPathComponent(fileName)
-        
-        try data.write(to: backupURL)
-        print("💾 Backup creato: \(backupURL.lastPathComponent)")
-        return backupURL
-    }
-    
-    func ripristinaBackup(from url: URL) throws {
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        
-        let backupData = try decoder.decode(BackupData.self, from: data)
-        
-        let backupAttuale = try creaBackup()
-        print("🔄 Backup attuale salvato in: \(backupAttuale.lastPathComponent)")
-        
-        templates = backupData.templates
-        documentiCompilati = backupData.documentiCompilati
-        
-        for template in templates.filter({ !$0.isDefault }) {
-            salvaTemplate(template)
-        }
+    // 🔥 NUOVO: Ricerca avanzata con Adobe AI
+    func cercaConAI(query: String) async throws -> [DocumentoCompilato] {
+        var risultati: [DocumentoCompilato] = []
         
         for documento in documentiCompilati {
-            salvaDocumento(documento)
+            let adobeAnalysis = try await adobeManager.analyzeDocument(content: documento.contenutoFinale)
+            let detectedType = self.convertAdobeToLocal(adobeAnalysis.detectedType)
+            
+            // Logica di ricerca semantica semplificata
+            if documento.contenutoFinale.localizedCaseInsensitiveContains(query) ||
+               detectedType.rawValue.localizedCaseInsensitiveContains(query) {
+                risultati.append(documento)
+            }
         }
         
-        print("🔄 Backup ripristinato da: \(url.lastPathComponent)")
+        return risultati
     }
     
-    // MARK: - Utilità
-    func validaTemplate(_ template: DocumentoTemplate) -> [String] {
-        var errori: [String] = []
+    // MARK: - ⭐ DOCUMENT OPERATIONS (ESISTENTE)
+    
+    func duplicaDocumento(_ documento: DocumentoCompilato) -> DocumentoCompilato {
+        var nuovoDocumento = documento
+        nuovoDocumento = DocumentoCompilato(template: documento.template, defunto: documento.defunto)
+        nuovoDocumento.contenutoFinale = documento.contenutoFinale
+        nuovoDocumento.note = documento.note + "\n[Duplicato da documento del \(documento.dataCreazioneFormattata)]"
         
-        if template.nome.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            errori.append("Il nome del template è obbligatorio")
-        }
-        
-        if template.contenuto.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            errori.append("Il contenuto del template è obbligatorio")
-        }
-        
-        if templates.contains(where: { $0.nome == template.nome && $0.id != template.id }) {
-            errori.append("Esiste già un template con questo nome")
-        }
-        
-        return errori
+        return nuovoDocumento
     }
     
-    func ottieniPathDocumenti() -> String {
-        return documentsDirectory.path
+    func eliminaDocumento(_ documento: DocumentoCompilato) {
+        documentiCompilati.removeAll { $0.id == documento.id }
+        
+        // 🔥 AGGIUNTO: Elimina anche i file fisici
+        do {
+            let fileName = "\(documento.nomeFileConsigliato).txt"
+            let fileURL = fileManager.documentiCompilatiFolderURL.appendingPathComponent(fileName)
+            
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                try FileManager.default.removeItem(at: fileURL)
+                print("🗑️ File eliminato: \(fileName)")
+            }
+        } catch {
+            print("❌ Errore eliminazione file: \(error)")
+        }
     }
     
-    func pulisciCache() {
-        let cutoffDate = Calendar.current.date(byAdding: .year, value: -2, to: Date())!
+    // MARK: - ⭐ TEMPLATE OPERATIONS (ESISTENTE + POTENZIATO)
+    
+    func aggiungiTemplate(_ template: DocumentoTemplate) {
+        templates.append(template)
         
-        let documentiVecchi = documentiCompilati.filter { $0.dataCreazione < cutoffDate }
+        // 🔥 AGGIUNTO: Salva automaticamente se personalizzato
+        if !template.isDefault {
+            do {
+                let _ = try fileManager.salvaTemplate(template)
+            } catch {
+                print("❌ Errore salvataggio template: \(error)")
+            }
+        }
+    }
+    
+    func rimuoviTemplate(_ template: DocumentoTemplate) {
+        templates.removeAll { $0.id == template.id }
         
-        for documento in documentiVecchi {
-            rimuoviDocumentoCompilato(documento)
+        // 🔥 AGGIUNTO: Elimina file template se esiste
+        if !template.isDefault {
+            do {
+                try fileManager.eliminaTemplate(template)
+            } catch {
+                print("❌ Errore eliminazione template file: \(error)")
+            }
+        }
+    }
+    
+    // MARK: - ⭐ IMPORT/EXPORT TEMPLATE (ESISTENTE)
+    
+    func importaTemplate(da url: URL) throws {
+        let data = try Data(contentsOf: url)
+        let template = try JSONDecoder().decode(DocumentoTemplate.self, from: data)
+        
+        if !templates.contains(where: { $0.nome == template.nome }) {
+            templates.append(template)
+            print("📥 Template importato: \(template.nome)")
+        } else {
+            print("⚠️ Template già esistente: \(template.nome)")
+        }
+    }
+    
+    func esportaTemplate(_ template: DocumentoTemplate) throws -> URL {
+        return try fileManager.salvaTemplate(template)
+    }
+    
+    func salvaTemplatePersonalizzati() throws {
+        for template in templates {
+            if !template.isDefault {
+                let _ = try fileManager.salvaTemplate(template)
+            }
+        }
+    }
+    
+    func caricaTemplatePersonalizzati() {
+        let templatesCaricati = fileManager.caricaTemplates()
+        
+        for template in templatesCaricati {
+            if !templates.contains(where: { $0.nome == template.nome }) {
+                templates.append(template)
+            }
+        }
+    }
+    
+    // MARK: - 🔥 FUNZIONI HELPER CORRETTE
+    
+    // ✅ Helper per qualità
+    private func qualityFromDouble(_ quality: Double) -> String {
+        if quality > 0.8 { return "Eccellente" }
+        else if quality > 0.6 { return "Buona" }
+        else if quality > 0.4 { return "Discreta" }
+        else { return "Scarsa" }
+    }
+    
+    private func estraiCampiDaContenuto(_ contenuto: String) -> [CampoDocumento] {
+        var campi: [CampoDocumento] = []
+        let pattern = "\\{\\{([A-Z_]+)\\}\\}"
+        
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
+            let matches = regex.matches(in: contenuto, range: NSRange(contenuto.startIndex..., in: contenuto))
+            
+            var foundFields = Set<String>()
+            
+            for match in matches {
+                if let range = Range(match.range(at: 1), in: contenuto) {
+                    let fieldName = String(contenuto[range])
+                    
+                    if !foundFields.contains(fieldName) {
+                        foundFields.insert(fieldName)
+                        
+                        let campo = CampoDocumento(
+                            nome: fieldName.replacingOccurrences(of: "_", with: " ").capitalized,
+                            chiave: fieldName,
+                            tipo: inferTipoCampo(from: fieldName),
+                            obbligatorio: isCampoObbligatorio(fieldName)
+                        )
+                        
+                        campi.append(campo)
+                    }
+                }
+            }
+        } catch {
+            print("Errore estrazione campi: \(error)")
         }
         
-        print("🧹 Puliti \(documentiVecchi.count) documenti obsoleti")
+        return campi.sorted { $0.nome < $1.nome }
     }
-}
-
-// MARK: - Strutture di Supporto
-struct StatisticheDocumenti {
-    let totaleDocumenti: Int
-    let totaleTemplate: Int
-    let templatePersonalizzati: Int
-    let documentiOggi: Int
-    let documentiSettimana: Int
-    let documentiMese: Int
-    let templatePiuUsati: [DocumentoTemplate]
-}
-
-struct BackupData: Codable {
-    let dataCreazione: Date
-    let versione: String
-    let templates: [DocumentoTemplate]
-    let documentiCompilati: [DocumentoCompilato]
-}
-
-// MARK: - Estensioni DateFormatter
-extension DateFormatter {
-    static let backupDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-        return formatter
-    }()
+    
+    private func inferTipoCampo(from fieldName: String) -> TipoCampoDocumento {
+        let name = fieldName.lowercased()
+        
+        if name.contains("data") || name.contains("date") {
+            return .data
+        } else if name.contains("ora") || name.contains("time") {
+            return .ora
+        } else if name.contains("email") {
+            return .email
+        } else if name.contains("telefono") || name.contains("phone") {
+            return .telefono
+        } else if name.contains("note") || name.contains("descrizione") {
+            return .testoLungo
+        } else {
+            return .testo
+        }
+    }
+    
+    private func isCampoObbligatorio(_ fieldName: String) -> Bool {
+        let campiObbligatori = [
+            "NOME_DEFUNTO", "COGNOME_DEFUNTO", "DATA_DECESSO",
+            "LUOGO_DECESSO", "NOME_RICHIEDENTE", "DATA_NASCITA"
+        ]
+        return campiObbligatori.contains(fieldName)
+    }
+    
+    private func generaCSV(_ documento: DocumentoCompilato) -> String {
+        let header = "Template,Defunto,Cartella,Data Creazione,Data Completamento,Stato,Operatore"
+        let dataCompletamento = documento.dataCompletamentoFormattata ?? "N/A"
+        let stato = documento.isCompletato ? "Completato" : "In Elaborazione"
+        
+        let row = "\(documento.template.nome),\(documento.defunto.nomeCompleto),\(documento.defunto.numeroCartella),\(documento.dataCreazioneFormattata),\(dataCompletamento),\(stato),\(documento.operatoreCreazione)"
+        
+        return "\(header)\n\(row)"
+    }
+    
+    // MARK: - 🔥 FUNZIONI DI CONVERSIONE PRIVATE
+    
+    private func convertAdobeToLocal(_ adobeType: AdobeTipoDocumento) -> TipoDocumento {
+        switch adobeType {
+        case .autorizzazioneTrasporto:
+            return .autorizzazioneTrasporto
+        case .comunicazioneParrocchia:
+            return .comunicazioneParrocchia
+        case .fattura:
+            return .fattura
+        case .contratto:
+            return .contratto
+        case .certificatoMorte:
+            return .certificatoMorte
+        case .visitaNecroscopica:
+            return .certificatoMorte // Mappato a certificato morte
+        case .altro:
+            return .altro
+        }
+    }
 }

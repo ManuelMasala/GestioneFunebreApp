@@ -45,7 +45,9 @@ struct TemplateManagerView: View {
         }
         .sheet(item: $templateSelezionato) { template in
             TemplateDetailView(template: template) { templateAggiornato in
-                documentiManager.aggiornaTemplate(templateAggiornato)
+                // Il tuo DocumentiManager non ha aggiornaTemplate, quindi rimuoviamo e aggiungiamo
+                documentiManager.rimuoviTemplate(template)
+                documentiManager.aggiungiTemplate(templateAggiornato)
             }
         }
         .alert("Elimina Template", isPresented: $showingDeleteAlert) {
@@ -255,6 +257,7 @@ struct TemplateManagerView: View {
     
     // MARK: - Actions
     private func importaTemplate() {
+        #if os(macOS)
         let openPanel = NSOpenPanel()
         openPanel.allowedContentTypes = [.json]
         openPanel.allowsMultipleSelection = false
@@ -262,26 +265,35 @@ struct TemplateManagerView: View {
         
         if openPanel.runModal() == .OK, let url = openPanel.url {
             do {
-                try documentiManager.importaTemplate(from: url)
+                try documentiManager.importaTemplate(da: url)
             } catch {
                 print("Errore importazione: \(error)")
             }
         }
+        #else
+        print("Import non disponibile su questa piattaforma")
+        #endif
     }
     
     private func esportaTemplate(_ template: DocumentoTemplate) {
+        #if os(macOS)
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [.json]
         savePanel.nameFieldStringValue = "\(template.nome).json"
         
         if savePanel.runModal() == .OK, let url = savePanel.url {
             do {
-                let data = try documentiManager.esportaTemplate(template)
+                let exportedURL = try documentiManager.esportaTemplate(template)
+                let data = try Data(contentsOf: exportedURL)
                 try data.write(to: url)
+                print("✅ Template esportato in: \(url.path)")
             } catch {
                 print("Errore esportazione: \(error)")
             }
         }
+        #else
+        print("Export non disponibile su questa piattaforma")
+        #endif
     }
 }
 
@@ -553,7 +565,6 @@ struct NuovoTemplateView: View {
                 Spacer()
                 
                 Button("Inserisci Placeholder") {
-                    // Mostra menu con placeholder comuni
                     insertPlaceholderMenu()
                 }
                 .font(.caption)
@@ -648,7 +659,6 @@ struct NuovoTemplateView: View {
     }
     
     private func insertPlaceholderMenu() {
-        // Implementazione menu placeholder
         print("Mostra menu placeholder")
     }
     
@@ -713,7 +723,8 @@ struct CampoRow: View {
     }
 }
 
-// MARK: - Aggiungi Campo View
+// MARK: - ⭐ AGGIUNGI CAMPO VIEW CORRETTA
+
 struct AggiungiCampoView: View {
     let onSave: (CampoDocumento) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -722,8 +733,6 @@ struct AggiungiCampoView: View {
     @State private var chiave = ""
     @State private var tipo: TipoCampoDocumento = .testo
     @State private var obbligatorio = false
-    @State private var valorePredefinito = ""
-    @State private var descrizione = ""
     
     var body: some View {
         NavigationView {
@@ -751,11 +760,6 @@ struct AggiungiCampoView: View {
                     
                     Toggle("Campo obbligatorio", isOn: $obbligatorio)
                 }
-                
-                Section("Opzionale") {
-                    TextField("Valore predefinito", text: $valorePredefinito)
-                    TextField("Descrizione", text: $descrizione)
-                }
             }
             .navigationTitle("Nuovo Campo")
             .toolbar {
@@ -764,13 +768,12 @@ struct AggiungiCampoView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Salva") {
+                        // ✅ CORRETTO: Usa solo i parametri che esistono nel costruttore
                         let campo = CampoDocumento(
                             nome: nome,
                             chiave: chiave,
                             tipo: tipo,
-                            obbligatorio: obbligatorio,
-                            valorePredefinito: valorePredefinito,
-                            descrizione: descrizione
+                            obbligatorio: obbligatorio
                         )
                         onSave(campo)
                         dismiss()

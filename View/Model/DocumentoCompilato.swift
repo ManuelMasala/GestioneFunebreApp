@@ -4,7 +4,6 @@
 //
 //  Created by Manuel Masala on 19/07/25.
 //
-
 import Foundation
 import SwiftUI
 
@@ -17,6 +16,7 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
     var contenutoFinale: String
     var dataCreazione: Date
     var dataUltimaModifica: Date
+    var dataCompletamento: Date? // AGGIUNTO - Proprietà mancante
     var isCompletato: Bool
     var note: String
     var operatoreCreazione: String
@@ -27,6 +27,7 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
         self.contenutoFinale = template.contenuto
         self.dataCreazione = Date()
         self.dataUltimaModifica = Date()
+        self.dataCompletamento = nil // AGGIUNTO
         self.isCompletato = false
         self.note = ""
         self.operatoreCreazione = operatoreCreazione
@@ -47,6 +48,16 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
         formatter.timeStyle = .short
         formatter.locale = Locale(identifier: "it_IT")
         return formatter.string(from: dataUltimaModifica)
+    }
+    
+    // AGGIUNTO - Formattazione data completamento
+    var dataCompletamentoFormattata: String? {
+        guard let dataCompletamento = dataCompletamento else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        formatter.locale = Locale(identifier: "it_IT")
+        return formatter.string(from: dataCompletamento)
     }
     
     var nomeFileConsigliato: String {
@@ -135,6 +146,7 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
     
     mutating func marcaCompletato() {
         isCompletato = true
+        dataCompletamento = Date() // AGGIUNTO - Imposta data completamento
         dataUltimaModifica = Date()
     }
     
@@ -161,6 +173,9 @@ struct DocumentoCompilato: Identifiable, Codable, Hashable {
         output += "Defunto: \(defunto.nomeCompleto)\n"
         output += "Cartella N°: \(defunto.numeroCartella)\n"
         output += "Data Generazione: \(dataCreazioneFormattata)\n"
+        if let dataCompl = dataCompletamentoFormattata {
+            output += "Data Completamento: \(dataCompl)\n"
+        }
         output += "Operatore: \(operatoreCreazione)\n\n"
         output += "--- CONTENUTO DOCUMENTO ---\n\n"
         output += contenutoFinale

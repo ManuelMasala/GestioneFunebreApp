@@ -220,10 +220,9 @@ extension DocumentoTemplate {
             
             Ringrazio
             
-            AGENZIA FUNEBRE PARADISO
-            DI MARCO LECCA
-            Via Palabanda n. 21- 09123 Cagliari
-            Tel. e Fax 070/684679 Cell. 348 9511328
+            {{NOME AGENZIA FUNEBRE}}
+            {{VIA  NUMERO CIVICO CAP E CITTà }} 
+            {{RECAPITI TELEFONICI}}
             
             ______________________________
             Visto dell'Ufficiale dello Stato Civile
@@ -248,32 +247,30 @@ extension DocumentoTemplate {
             contenuto: """
             SPETT. {{NOME_PARROCCHIA}}
             
-            Si comunica che in data {{DATA_FUNERALE}} alle ore {{ORA_FUNERALE}}
-            si svolgerà il funerale di {{NOME_DEFUNTO}} {{COGNOME_DEFUNTO}}
+            Defunto {{NOME_DEFUNTO}} {{COGNOME_DEFUNTO}}
+            
+            DI fu {{NOME_PADRE}} Di fu {{NOME_COGNOME_MADRE}
             
             nato a {{LUOGO_NASCITA_DEFUNTO}} il {{DATA_NASCITA_DEFUNTO}}
+            
             deceduto in data {{DATA_DECESSO}} presso {{LUOGO_DECESSO}}
             
-            La salma sarà presente in chiesa dalle ore {{ORA_ARRIVO_CHIESA}}.
+            Stato Civile {{SE_CONIUGATO_NOME_COGNOME_CONIUGE}}
             
-            Al termine della funzione religiosa, la salma sarà trasportata 
-            presso {{LUOGO_SEPOLTURA}} per la {{TIPO_SEPOLTURA}}.
-            
-            Famiglia richiedente: {{NOME_FAMILIARE}} {{COGNOME_FAMILIARE}}
-            Telefono: {{TELEFONO_FAMILIARE}}
+            {{CREMAZIONE/TUMULAZIONE}} presso il cimitero di {{NOME_CIMITERO}}
             
             Si ringrazia per la collaborazione.
             
-            AGENZIA FUNEBRE PARADISO
-            DI MARCO LECCA
-            Via Palabanda n. 21- 09123 Cagliari
-            Tel. e Fax 070/684679 Cell. 348 9511328
+            {{NOME AGENZIA FUNEBRE}}
+            {{VIA  NUMERO CIVICO CAP E CITTà }} 
+            {{RECAPITI TELEFONICI}}
             """,
             campiCompilabili: [
                 CampoDocumento(nome: "Nome Parrocchia", chiave: "NOME_PARROCCHIA", tipo: .testo, obbligatorio: true),
-                CampoDocumento(nome: "Data Funerale", chiave: "DATA_FUNERALE", tipo: .data, obbligatorio: true),
-                CampoDocumento(nome: "Ora Funerale", chiave: "ORA_FUNERALE", tipo: .ora, obbligatorio: true),
-                CampoDocumento(nome: "Ora Arrivo Chiesa", chiave: "ORA_ARRIVO_CHIESA", tipo: .ora, obbligatorio: true)
+                CampoDocumento(nome: "Nome e cognome defunto", chiave: "NOME_E_COGNOME_DEFUNTO", tipo: .testo, obbligatorio: true),
+                CampoDocumento(nome: "Luogo nascita defunto", chiave: "LUOGO_NASCITA_DEFUNTO", tipo: .testo, obbligatorio: true),
+                CampoDocumento(nome: "Data di decesso", chiave: "DATA_DECESSO", tipo: .testo, obbligatorio: true),
+                CampoDocumento(nome: "Luogo di decesso", chiave: "LUOGO_DECESSO", tipo: .testo, obbligatorio: true)
             ],
             isDefault: true,
             note: "Template standard per comunicazioni alle parrocchie"

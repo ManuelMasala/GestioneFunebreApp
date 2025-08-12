@@ -2,39 +2,35 @@
 //  DashboardView.swift
 //  GestioneFunebreApp
 //
-//  Created by Manuel Masala on 17/07/25.
+//  Created by Manuel Masala on 24/07/25.
 //
 
 import SwiftUI
 
-// MARK: - Dashboard Moderna e Completa
+// MARK: - ⭐ Dashboard Integrata - Versione Finale Corretta
+
 struct DashboardView: View {
     @StateObject private var defuntiManager = ManagerGestioneDefunti()
-    @State private var showingNuovoDefunto = false
-    @State private var showingContabilita = false
-    @State private var showingMezzi = false
-    @State private var showingInventario = false
-    @State private var showingFornitori = false
-    @State private var selectedTimeRange: TimeRange = .settimana
+    @StateObject private var dashboardManager = DashboardManager()
+    @StateObject private var documentiManager = DocumentiManager()
+    @StateObject private var adobeManager = AdobePDFManager.shared
     
-    enum TimeRange: String, CaseIterable {
-        case oggi = "Oggi"
-        case settimana = "Settimana"
-        case mese = "Mese"
-        case anno = "Anno"
-    }
+    @State private var showingNuovoDefunto = false
+    @State private var showingDocumenti = false
+    @State private var showingAdobeImport = false
+    @State private var selectedTimeRange: DashboardTimeRange = .settimana
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 32) {
-                // Header con gradiente
+            VStack(spacing: 24) {
+                // Header
                 headerSection
                 
                 // Statistiche principali
                 statsSection
                 
-                // Grafici e metriche
-                chartsSection
+                // Adobe Integration Panel
+                adobeSection
                 
                 // Azioni rapide
                 quickActionsSection
@@ -42,47 +38,55 @@ struct DashboardView: View {
                 // Attività recenti
                 recentActivitySection
                 
-                // Promemoria e notifiche
+                // Notifiche
                 notificationsSection
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
             .padding(.bottom, 40)
         }
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(NSColor.controlBackgroundColor),
-                    Color(NSColor.controlBackgroundColor).opacity(0.8)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        .background(Color(NSColor.windowBackgroundColor))
+        .onAppear {
+            setupDashboard()
+        }
+        .refreshable {
+            refreshAllData()
+        }
         .sheet(isPresented: $showingNuovoDefunto) {
             NuovoDefuntoBasicView()
                 .environmentObject(defuntiManager)
         }
-        .sheet(isPresented: $showingContabilita) {
-            ContabilitaModernaView()
+        .sheet(isPresented: $showingDocumenti) {
+            TemplateManagerView()
+                .environmentObject(documentiManager)
         }
-        .sheet(isPresented: $showingMezzi) {
-            GestioneMezziView()
-        }
-        .sheet(isPresented: $showingInventario) {
-            InventarioModernoView()
-        }
-        .sheet(isPresented: $showingFornitori) {
-            FornitoriModerniView()
+        .sheet(isPresented: $showingAdobeImport) {
+            AdobeImportView()
+                .environmentObject(documentiManager)
         }
     }
     
+    // MARK: - Setup
+    
+    private func setupDashboard() {
+        dashboardManager.connectDefuntiManager(defuntiManager)
+        dashboardManager.connectDocumentiManager(documentiManager)
+        dashboardManager.refreshData()
+    }
+    
+    private func refreshAllData() {
+        dashboardManager.refreshData()
+        documentiManager.ricaricaDocumenti()
+    }
+    
+    // MARK: - Header Section
+    
     private var headerSection: some View {
-        VStack(spacing: 20) {
-            // Header con gradiente
+        VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Dashboard")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [.blue, .purple],
@@ -92,356 +96,357 @@ struct DashboardView: View {
                         )
                     
                     Text("Panoramica generale dell'attività")
-                        .font(.title3)
+                        .font(.title2)
                         .foregroundColor(.secondary)
                     
-                    Text("Aggiornato: \(Date().formatted(date: .omitted, time: .shortened))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 16) {
+                        Text("Aggiornato: \(Date().formatted(date: .omitted, time: .shortened))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(adobeManager.isProcessing ? .orange : .green)
+                                .frame(width: 8, height: 8)
+                            Text("Adobe")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(8)
+                    }
                 }
                 
                 Spacer()
                 
-                // Time Range Selector
-                VStack(spacing: 8) {
-                    Text("Periodo")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
+                VStack(spacing: 12) {
                     Picker("Periodo", selection: $selectedTimeRange) {
-                        ForEach(TimeRange.allCases, id: \.self) { range in
+                        ForEach(DashboardTimeRange.allCases, id: \.self) { range in
                             Text(range.rawValue).tag(range)
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                    .frame(width: 200)
+                    .frame(width: 240)
+                    
+                    HStack(spacing: 8) {
+                        Button("📄 Import Adobe") {
+                            showingAdobeImport = true
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.red)
+                        
+                        Button("📊 Documenti") {
+                            showingDocumenti = true
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.blue)
+                    }
                 }
             }
-            .padding(.top, 20)
+            .frame(minHeight: 120)
+            .padding(.top, 16)
         }
     }
+    
+    // MARK: - Stats Section
     
     private var statsSection: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: 16) {
-            ModernStatCard(
-                title: "Defunti Totali",
-                value: "\(defuntiManager.defunti.count)",
-                subtitle: "Questo mese: +\(defuntiManager.defunti.count)",
+        let stats = dashboardManager.getStatsForPeriod(selectedTimeRange)
+        
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
+            RealStatCard(
+                title: "Defunti",
+                value: "\(dashboardManager.defuntiCount)",
+                subtitle: "Periodo: +\(stats.defunti)",
                 icon: "person.3.fill",
                 color: .blue,
-                trend: "+12%"
+                trend: stats.trendFormatted
             )
             
-            ModernStatCard(
-                title: "Cremazioni",
-                value: "\(cremazioni)",
-                subtitle: "47% del totale",
-                icon: "flame.fill",
+            RealStatCard(
+                title: "Mezzi",
+                value: "\(dashboardManager.mezziDisponibili)",
+                subtitle: "Manutenzione: \(dashboardManager.mezziInManutenzione)",
+                icon: "car.2.fill",
                 color: .orange,
-                trend: "+8%"
+                trend: "+5%"
             )
             
-            ModernStatCard(
-                title: "Tumulazioni",
-                value: "\(tumulazioni)",
-                subtitle: "53% del totale",
-                icon: "building.columns.fill",
+            let adobeTemplatesCount = documentiManager.templates.filter { $0.operatoreCreazione.contains("Adobe") }.count
+            RealStatCard(
+                title: "Documenti",
+                value: "\(documentiManager.documentiCompilati.count)",
+                subtitle: "Adobe: \(adobeTemplatesCount)",
+                icon: "doc.fill",
                 color: .green,
-                trend: "-3%"
+                trend: "+\(stats.documenti)"
             )
             
-            ModernStatCard(
+            RealStatCard(
                 title: "Fatturato",
-                value: "€45.2K",
-                subtitle: "Target: €50K",
+                value: "€\(dashboardManager.fatturato)",
+                subtitle: stats.fatturatoFormatted,
                 icon: "eurosign.circle.fill",
                 color: .purple,
-                trend: "+15%"
+                trend: stats.trendFormatted
             )
         }
     }
     
-    private var chartsSection: some View {
-        VStack(spacing: 20) {
+    // MARK: - Adobe Section
+    
+    private var adobeSection: some View {
+        VStack(spacing: 16) {
             HStack {
-                Text("Analisi e Metriche")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.badge.gearshape")
+                        .foregroundColor(.red)
+                    Text("Adobe PDF Services")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
                 
                 Spacer()
                 
-                Button("Vedi Dettagli") {
-                    // Azione per dettagli
+                if adobeManager.isProcessing {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text(adobeManager.currentTask)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
-                .font(.caption)
-                .foregroundColor(.blue)
             }
             
             HStack(spacing: 16) {
-                // Grafico andamento mensile
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Andamento Mensile")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    // Simulazione grafico
-                    HStack(alignment: .bottom, spacing: 4) {
-                        ForEach(0..<12) { index in
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.blue.opacity(0.8), .blue.opacity(0.3)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .frame(width: 12, height: CGFloat.random(in: 20...80))
-                        }
+                    HStack(spacing: 16) {
+                        AdobeStatView(
+                            title: "Operazioni Oggi",
+                            value: "\(adobeManager.todayOperations)",
+                            color: .red
+                        )
+                        
+                        AdobeStatView(
+                            title: "Success Rate",
+                            value: "\(Int(adobeManager.successRate * 100))%",
+                            color: .green
+                        )
+                        
+                        let templatesCount = documentiManager.templates.filter { $0.operatoreCreazione.contains("Adobe") }.count
+                        AdobeStatView(
+                            title: "Templates Adobe",
+                            value: "\(templatesCount)",
+                            color: .blue
+                        )
                     }
-                    .frame(height: 80)
                     
-                    Text("Trend positivo del 12%")
-                        .font(.caption)
-                        .foregroundColor(.green)
+                    if adobeManager.isProcessing {
+                        ProgressView(value: adobeManager.progress)
+                            .tint(.red)
+                    }
                 }
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
                 
-                // Distribuzione per tipo
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Distribuzione Servizi")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    VStack(spacing: 8) {
-                        HStack {
-                            Circle()
-                                .fill(Color.orange)
-                                .frame(width: 12, height: 12)
-                            Text("Cremazioni")
-                                .font(.caption)
-                            Spacer()
-                            Text("47%")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        
-                        HStack {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 12, height: 12)
-                            Text("Tumulazioni")
-                                .font(.caption)
-                            Spacer()
-                            Text("53%")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
+                Spacer()
+                
+                VStack(spacing: 8) {
+                    AdobeActionButton(
+                        title: "Import Template",
+                        icon: "square.and.arrow.down",
+                        color: .red
+                    ) {
+                        performAdobeImport()
                     }
                     
-                    // Barra di progresso
-                    HStack(spacing: 0) {
-                        Rectangle()
-                            .fill(Color.orange)
-                            .frame(height: 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        Rectangle()
-                            .fill(Color.green)
-                            .frame(height: 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    AdobeActionButton(
+                        title: "Analizza Documenti",
+                        icon: "magnifyingglass",
+                        color: .purple
+                    ) {
+                        performBulkAnalysis()
                     }
-                    .cornerRadius(4)
                 }
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
             }
         }
+        .padding(20)
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.red.opacity(0.3), lineWidth: 1)
+        )
     }
     
+    // MARK: - Quick Actions
+    
     private var quickActionsSection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             HStack {
                 Text("Azioni Rapide")
                     .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
+                    .fontWeight(.semibold)
                 Spacer()
             }
             
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                // Riga 1
-                QuickActionButton(
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 3), spacing: 16) {
+                QuickActionCard(
                     title: "Nuovo Defunto",
                     description: "Registra un nuovo defunto",
                     icon: "person.badge.plus",
-                    color: .blue,
-                    gradient: [.blue, .cyan]
+                    color: .blue
                 ) {
                     showingNuovoDefunto = true
                 }
                 
-                QuickActionButton(
-                    title: "Contabilità",
-                    description: "Gestisci fatture e pagamenti",
-                    icon: "creditcard.fill",
-                    color: .green,
-                    gradient: [.green, .mint]
-                ) {
-                    showingContabilita = true
-                }
-                
-                QuickActionButton(
-                    title: "Gestione Mezzi",
-                    description: "Veicoli e attrezzature",
-                    icon: "car.2.fill",
-                    color: .orange,
-                    gradient: [.orange, .yellow]
-                ) {
-                    showingMezzi = true
-                }
-                
-                // Riga 2
-                QuickActionButton(
-                    title: "Inventario",
-                    description: "Magazzino e scorte",
-                    icon: "archivebox.fill",
-                    color: .purple,
-                    gradient: [.purple, .pink]
-                ) {
-                    showingInventario = true
-                }
-                
-                QuickActionButton(
-                    title: "Fornitori",
-                    description: "Gestisci i fornitori",
-                    icon: "building.2.fill",
-                    color: .indigo,
-                    gradient: [.indigo, .blue]
-                ) {
-                    showingFornitori = true
-                }
-                
-                QuickActionButton(
-                    title: "Rapporti",
-                    description: "Stampa e esporta",
+                QuickActionCard(
+                    title: "Gestione Documenti",
+                    description: "Crea e gestisci documenti",
                     icon: "doc.text.fill",
-                    color: .teal,
-                    gradient: [.teal, .cyan]
+                    color: .green
                 ) {
-                    // Azione rapporti
+                    showingDocumenti = true
+                }
+                
+                QuickActionCard(
+                    title: "Import Adobe",
+                    description: "Importa con OCR Adobe",
+                    icon: "square.and.arrow.down.fill",
+                    color: .red
+                ) {
+                    showingAdobeImport = true
                 }
             }
         }
     }
     
+    // MARK: - Recent Activity
+    
     private var recentActivitySection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             HStack {
                 Text("Attività Recenti")
                     .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .fontWeight(.semibold)
                 
                 Spacer()
                 
                 Button("Vedi Tutto") {
-                    // Azione per vedere tutto
+                    showingDocumenti = true
                 }
                 .font(.caption)
                 .foregroundColor(.blue)
             }
             
             VStack(spacing: 12) {
-                ForEach(recentActivities, id: \.id) { activity in
-                    ActivityRow(activity: activity)
+                if dashboardManager.recentActivities.isEmpty {
+                    Text("Nessuna attività recente")
+                        .foregroundColor(.secondary)
+                        .frame(height: 100)
+                } else {
+                    ForEach(dashboardManager.recentActivities.prefix(5)) { activity in
+                        RealActivityRow(activity: activity)
+                    }
                 }
             }
-            .padding()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+            .padding(16)
+            .background(.ultraThinMaterial)
+            .cornerRadius(12)
         }
     }
     
+    // MARK: - Notifications
+    
     private var notificationsSection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             HStack {
                 Text("Promemoria e Notifiche")
                     .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .fontWeight(.semibold)
                 
                 Spacer()
                 
-                Button("Gestisci") {
-                    // Azione per gestire notifiche
+                if dashboardManager.unreadNotifications > 0 {
+                    Text("\(dashboardManager.unreadNotifications)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                        .background(.red)
+                        .cornerRadius(10)
                 }
-                .font(.caption)
-                .foregroundColor(.blue)
             }
             
             VStack(spacing: 12) {
-                NotificationCard(
-                    title: "Scadenza Documenti",
-                    message: "3 certificati in scadenza questa settimana",
-                    type: .warning,
-                    action: "Verifica"
-                )
-                
-                NotificationCard(
-                    title: "Manutenzione Veicoli",
-                    message: "Revisione auto funebre prevista per domani",
-                    type: .info,
-                    action: "Pianifica"
-                )
-                
-                NotificationCard(
-                    title: "Pagamenti in Sospeso",
-                    message: "2 fatture da incassare entro fine mese",
-                    type: .error,
-                    action: "Sollecita"
-                )
+                if dashboardManager.alerts.isEmpty {
+                    Text("Nessun avviso attivo")
+                        .foregroundColor(.secondary)
+                        .frame(height: 80)
+                } else {
+                    ForEach(dashboardManager.alerts.prefix(4)) { alert in
+                        RealAlertCard(alert: alert) {
+                            dashboardManager.dismissAlert(alert.id)
+                        }
+                    }
+                }
             }
         }
     }
     
-    // MARK: - Computed Properties
-    private var cremazioni: Int {
-        defuntiManager.defunti.filter { $0.tipoSepoltura == .cremazione }.count
+    // MARK: - Adobe Actions
+    
+    private func performAdobeImport() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.pdf, .image]
+        panel.title = "Seleziona file per Import Adobe"
+        panel.allowsMultipleSelection = true
+        
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                Task {
+                    do {
+                        let template = try await documentiManager.importaTemplateConAdobe(da: url)
+                        
+                        await MainActor.run {
+                            print("✅ Template Adobe importato: \(template.nome)")
+                            
+                            // Forza refresh dei manager
+                            documentiManager.forzaRefreshTemplates()
+                            dashboardManager.refreshData()
+                            
+                            // Debug per verificare
+                            documentiManager.debugTemplates()
+                        }
+                    } catch {
+                        print("❌ Errore import Adobe: \(error)")
+                    }
+                }
+            }
+        }
     }
     
-    private var tumulazioni: Int {
-        defuntiManager.defunti.filter { $0.tipoSepoltura == .tumulazione }.count
-    }
-    
-    private var recentActivities: [Activity] {
-        [
-            Activity(id: 1, type: .nuovo, title: "Nuovo defunto registrato", description: "Mario Rossi - Cartella 0045", time: "2 ore fa", icon: "person.badge.plus"),
-            Activity(id: 2, type: .pagamento, title: "Pagamento ricevuto", description: "Fattura #2024-156 - €2.450", time: "4 ore fa", icon: "creditcard.fill"),
-            Activity(id: 3, type: .servizio, title: "Servizio completato", description: "Cremazione - Giuseppe Verdi", time: "1 giorno fa", icon: "flame.fill"),
-            Activity(id: 4, type: .manutenzione, title: "Manutenzione veicolo", description: "Auto funebre - Tagliando", time: "2 giorni fa", icon: "car.fill")
-        ]
+    private func performBulkAnalysis() {
+        Task {
+            for template in documentiManager.templates.prefix(5) {
+                do {
+                    let _ = try await documentiManager.analizzaTemplate(template)
+                } catch {
+                    print("❌ Errore analisi: \(error)")
+                }
+            }
+            
+            await MainActor.run {
+                dashboardManager.refreshData()
+            }
+        }
     }
 }
 
-// MARK: - Modern Stat Card
-struct ModernStatCard: View {
+// MARK: - ⭐ Componenti
+
+struct RealStatCard: View {
     let title: String
     let value: String
     let subtitle: String
@@ -450,13 +455,13 @@ struct ModernStatCard: View {
     let trend: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundColor(color)
                     .frame(width: 40, height: 40)
-                    .background(color.opacity(0.1))
+                    .background(color.opacity(0.15))
                     .cornerRadius(10)
                 
                 Spacer()
@@ -467,11 +472,11 @@ struct ModernStatCard: View {
                     .foregroundColor(trend.contains("+") ? .green : .red)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background((trend.contains("+") ? Color.green : Color.red).opacity(0.1))
-                    .cornerRadius(8)
+                    .background((trend.contains("+") ? Color.green : Color.red).opacity(0.15))
+                    .cornerRadius(6)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(value)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
@@ -485,97 +490,138 @@ struct ModernStatCard: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(20)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.08), radius: 15, x: 0, y: 5)
+        .padding(16)
+        .frame(height: 160)
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(color.opacity(0.3), lineWidth: 1)
         )
     }
 }
 
-// MARK: - Quick Action Button
-struct QuickActionButton: View {
+struct AdobeStatView: View {
     let title: String
-    let description: String
+    let value: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(width: 120)
+    }
+}
+
+struct AdobeActionButton: View {
+    let title: String
     let icon: String
     let color: Color
-    let gradient: [Color]
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(color)
+            .cornerRadius(8)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(AdobePDFManager.shared.isProcessing)
+    }
+}
+
+struct QuickActionCard: View {
+    let title: String
+    let description: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 32))
                     .foregroundColor(.white)
                     .frame(width: 64, height: 64)
                     .background(
                         LinearGradient(
-                            colors: gradient,
+                            colors: [color, color.opacity(0.7)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .cornerRadius(16)
-                    .shadow(color: color.opacity(0.3), radius: 10, x: 0, y: 4)
                 
-                VStack(spacing: 4) {
+                VStack(spacing: 6) {
                     Text(title)
                         .font(.headline)
-                        .fontWeight(.semibold)
                         .foregroundColor(.primary)
                     
                     Text(description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
                 }
             }
-            .padding(20)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(20)
-            .shadow(color: .black.opacity(0.08), radius: 15, x: 0, y: 5)
+            .padding(16)
+            .frame(height: 180)
+            .background(.ultraThinMaterial)
+            .cornerRadius(16)
             .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .scaleEffect(1.0)
-        .animation(.easeInOut(duration: 0.1), value: false)
     }
 }
 
-// MARK: - Activity Row
-struct ActivityRow: View {
-    let activity: Activity
+struct RealActivityRow: View {
+    let activity: DashboardActivity
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: activity.icon)
-                .font(.title3)
-                .foregroundColor(activity.type.color)
+            Circle()
+                .fill(activity.color)
                 .frame(width: 40, height: 40)
-                .background(activity.type.color.opacity(0.1))
-                .cornerRadius(10)
+                .overlay(
+                    Circle()
+                        .fill(activity.color.opacity(0.3))
+                        .frame(width: 12, height: 12)
+                )
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(activity.title)
                     .font(.body)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
                 
-                Text(activity.description)
+                Text(activity.subtitle)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            Text(activity.time)
+            Text(activity.timeAgo)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -583,94 +629,271 @@ struct ActivityRow: View {
     }
 }
 
-// MARK: - Notification Card
-struct NotificationCard: View {
-    let title: String
-    let message: String
-    let type: NotificationType
-    let action: String
+struct RealAlertCard: View {
+    let alert: DashboardAlert
+    let onDismiss: () -> Void
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: type.icon)
+            Image(systemName: alert.icon)
                 .font(.title3)
-                .foregroundColor(type.color)
+                .foregroundColor(alert.severity.color)
                 .frame(width: 40, height: 40)
-                .background(type.color.opacity(0.1))
+                .background(alert.severity.color.opacity(0.15))
                 .cornerRadius(10)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(alert.title)
                     .font(.body)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
                 
-                Text(message)
+                Text(alert.message)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            Button(action) {
-                // Azione
+            VStack(alignment: .trailing, spacing: 6) {
+                Text(alert.timeLeft)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(alert.severity.color)
+                
+                Button("×") {
+                    onDismiss()
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(width: 20, height: 20)
+                .background(.ultraThinMaterial)
+                .cornerRadius(10)
             }
-            .font(.caption)
-            .foregroundColor(type.color)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(type.color.opacity(0.1))
-            .cornerRadius(8)
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
+        .padding(12)
+        .background(.ultraThinMaterial)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(type.color.opacity(0.2), lineWidth: 1)
+                .stroke(alert.severity.color.opacity(0.3), lineWidth: 1)
         )
     }
 }
 
-// MARK: - Supporting Types
-struct Activity {
-    let id: Int
-    let type: ActivityType
-    let title: String
-    let description: String
-    let time: String
-    let icon: String
-}
+// MARK: - ⭐ Adobe Import View
 
-enum ActivityType {
-    case nuovo, pagamento, servizio, manutenzione
+struct AdobeImportView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var documentiManager: DocumentiManager
+    @StateObject private var adobeManager = AdobePDFManager.shared
     
-    var color: Color {
-        switch self {
-        case .nuovo: return .blue
-        case .pagamento: return .green
-        case .servizio: return .orange
-        case .manutenzione: return .purple
+    @State private var selectedFiles: [URL] = []
+    @State private var importResults: [ImportResult] = []
+    
+    struct ImportResult: Identifiable {
+        let id = UUID()
+        let fileName: String
+        let status: ImportStatus
+        let template: DocumentoTemplate?
+        
+        enum ImportStatus {
+            case processing, success, failed(String)
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Header
+            VStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.badge.gearshape")
+                        .font(.title)
+                        .foregroundColor(.red)
+                    
+                    Text("Import Adobe")
+                        .font(.title)
+                        .fontWeight(.bold)
+                }
+                
+                Text("Importa documenti utilizzando Adobe OCR")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            
+            // File Selection
+            VStack(spacing: 16) {
+                Button("Seleziona File") {
+                    selectFiles()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                
+                if !selectedFiles.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("File selezionati:")
+                            .font(.headline)
+                        
+                        ForEach(selectedFiles, id: \.self) { url in
+                            HStack {
+                                Image(systemName: "doc.fill")
+                                    .foregroundColor(.blue)
+                                Text(url.lastPathComponent)
+                                    .font(.caption)
+                                Spacer()
+                                Button("×") {
+                                    selectedFiles.removeAll { $0 == url }
+                                }
+                                .foregroundColor(.red)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+                
+                if !selectedFiles.isEmpty {
+                    Button("Avvia Import") {
+                        startImport()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(adobeManager.isProcessing)
+                }
+            }
+            
+            // Results
+            if !importResults.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Risultati Import:")
+                        .font(.headline)
+                    
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(importResults) { result in
+                                ImportResultRow(result: result)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Close Button
+            Button("Chiudi") {
+                dismiss()
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(20)
+        .frame(minWidth: 600, minHeight: 500)
+    }
+    
+    private func selectFiles() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.pdf, .image]
+        panel.allowsMultipleSelection = true
+        panel.title = "Seleziona file per Import Adobe"
+        
+        if panel.runModal() == .OK {
+            selectedFiles = panel.urls
+        }
+    }
+    
+    private func startImport() {
+        importResults = selectedFiles.map { url in
+            ImportResult(fileName: url.lastPathComponent, status: .processing, template: nil)
+        }
+        
+        for (index, url) in selectedFiles.enumerated() {
+            Task {
+                do {
+                    let template = try await documentiManager.importaTemplateConAdobe(da: url)
+                    
+                    await MainActor.run {
+                        importResults[index] = ImportResult(
+                            fileName: url.lastPathComponent,
+                            status: .success,
+                            template: template
+                        )
+                        
+                        print("✅ Template Adobe creato: \(template.nome)")
+                        
+                        // Forza refresh per assicurare che il template sia visibile
+                        documentiManager.forzaRefreshTemplates()
+                        documentiManager.debugTemplates()
+                    }
+                } catch {
+                    await MainActor.run {
+                        importResults[index] = ImportResult(
+                            fileName: url.lastPathComponent,
+                            status: .failed(error.localizedDescription),
+                            template: nil
+                        )
+                        
+                        print("❌ Errore import: \(error)")
+                    }
+                }
+            }
         }
     }
 }
 
-enum NotificationType {
-    case warning, info, error
+struct ImportResultRow: View {
+    let result: AdobeImportView.ImportResult
     
-    var color: Color {
-        switch self {
-        case .warning: return .orange
-        case .info: return .blue
-        case .error: return .red
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: statusIcon)
+                .foregroundColor(statusColor)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(result.fileName)
+                    .font(.body)
+                    .fontWeight(.medium)
+                
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            if case .processing = result.status {
+                ProgressView()
+                    .scaleEffect(0.8)
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .cornerRadius(8)
+    }
+    
+    private var statusIcon: String {
+        switch result.status {
+        case .processing: return "clock"
+        case .success: return "checkmark.circle.fill"
+        case .failed: return "xmark.circle.fill"
         }
     }
     
-    var icon: String {
-        switch self {
-        case .warning: return "exclamationmark.triangle.fill"
-        case .info: return "info.circle.fill"
-        case .error: return "xmark.circle.fill"
+    private var statusColor: Color {
+        switch result.status {
+        case .processing: return .orange
+        case .success: return .green
+        case .failed: return .red
+        }
+    }
+    
+    private var statusText: String {
+        switch result.status {
+        case .processing: return "Elaborazione in corso..."
+        case .success: return "Template creato con successo"
+        case .failed(let error): return "Errore: \(error)"
         }
     }
 }

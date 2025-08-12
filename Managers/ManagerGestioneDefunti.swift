@@ -5,51 +5,58 @@
 //  Created by Marco Lecca on 10/07/25.
 //
 
-import SwiftUI
 import Foundation
+import SwiftUI
 
-// MARK: - Manager per la Gestione Defunti
-@MainActor
 class ManagerGestioneDefunti: ObservableObject {
     @Published var defunti: [PersonaDefunta] = []
-    @Published var prossimoNumero: Int = 1
-    @Published var isLoading: Bool = false
-    @Published var errorMessage: String?
     @Published var searchText: String = ""
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String? = nil
     
-    private let userDefaults = UserDefaults.standard
-    private let defuntiKey = "defunti_salvati_v4"
-    private let prossimoNumeroKey = "prossimo_numero_cartella_v4"
-    
-    init() {
-        caricaDefunti()
-        aggiornaProssimoNumero()
-    }
-    
+    // MARK: - Computed Properties
     var defuntiFiltrati: [PersonaDefunta] {
         if searchText.isEmpty {
             return defunti.sorted { $0.dataCreazione > $1.dataCreazione }
+        } else {
+            return defunti.filter { defunto in
+                defunto.nome.localizedCaseInsensitiveContains(searchText) ||
+                defunto.cognome.localizedCaseInsensitiveContains(searchText) ||
+                defunto.numeroCartella.localizedCaseInsensitiveContains(searchText) ||
+                defunto.codiceFiscale.localizedCaseInsensitiveContains(searchText) ||
+                defunto.luogoNascita.localizedCaseInsensitiveContains(searchText)
+            }.sorted { $0.dataCreazione > $1.dataCreazione }
         }
-        
-        return defunti.filter { defunto in
-            defunto.nome.localizedCaseInsensitiveContains(searchText) ||
-            defunto.cognome.localizedCaseInsensitiveContains(searchText) ||
-            defunto.numeroCartella.contains(searchText) ||
-            defunto.codiceFiscale.localizedCaseInsensitiveContains(searchText)
-        }.sorted { $0.dataCreazione > $1.dataCreazione }
     }
     
+    init() {
+        loadDefunti()
+        // Genera dati di esempio se vuoto
+        if defunti.isEmpty {
+            generateSampleData()
+        }
+    }
+    
+    // MARK: - Core Functions
+    
     func generaNuovoNumeroCartella() -> String {
-        let numero = String(format: "%04d", prossimoNumero)
-        prossimoNumero += 1
-        salvaProssimoNumero()
-        return numero
+        let year = Calendar.current.component(.year, from: Date())
+        let nextNumber = (defunti.count + 1)
+        return "\(year)-\(String(format: "%04d", nextNumber))"
     }
     
     func aggiungiDefunto(_ defunto: PersonaDefunta) {
-        defunti.append(defunto)
-        salvaDefunti()
-        errorMessage = nil
+        var nuovoDefunto = defunto
+        if nuovoDefunto.numeroCartella.isEmpty {
+            nuovoDefunto.numeroCartella = generaNuovoNumeroCartella()
+        }
+        defunti.append(nuovoDefunto)
+        saveDefunti()
+    }
+    
+    func eliminaDefunto(_ defunto: PersonaDefunta) {
+        defunti.removeAll { $0.id == defunto.id }
+        saveDefunti()
     }
     
     func aggiornaDefunto(_ defunto: PersonaDefunta) {
@@ -57,135 +64,163 @@ class ManagerGestioneDefunti: ObservableObject {
             var defuntoAggiornato = defunto
             defuntoAggiornato.dataUltimaModifica = Date()
             defunti[index] = defuntoAggiornato
-            salvaDefunti()
+            saveDefunti()
         }
     }
     
-    func eliminaDefunto(_ defunto: PersonaDefunta) {
-        defunti.removeAll { $0.id == defunto.id }
-        salvaDefunti()
+    // MARK: - Data Persistence
+    
+    private func saveDefunti() {
+        isLoading = true
+        
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            Thread.sleep(forTimeInterval: 0.5)
+            
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                print("💾 Salvati \(self?.defunti.count ?? 0) defunti")
+            }
+        }
     }
     
-    func defunto(conId id: UUID) -> PersonaDefunta? {
-        return defunti.first { $0.id == id }
+    private func loadDefunti() {
+        isLoading = true
+        
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            Thread.sleep(forTimeInterval: 0.3)
+            
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                print("📂 Caricati \(self?.defunti.count ?? 0) defunti")
+            }
+        }
     }
     
-    // MARK: - Statistiche
+    // MARK: - Search and Filter
     
-    func getStatistiche() -> (totale: Int, questoMese: Int, maschi: Int, femmine: Int) {
-        let calendario = Calendar.current
-        let ora = Date()
-        
-        let questoMese = defunti.filter { defunto in
-            calendario.isDate(defunto.dataCreazione, equalTo: ora, toGranularity: .month)
-        }.count
-        
-        let maschi = defunti.filter { $0.sesso == .maschio }.count
-        let femmine = defunti.filter { $0.sesso == .femmina }.count
-        
-        return (defunti.count, questoMese, maschi, femmine)
+    func cercaDefunti(termine: String) {
+        searchText = termine
     }
     
-    func getDefuntiPerMese() -> [String: Int] {
-        let calendar = Calendar.current
+    func clearSearch() {
+        searchText = ""
+    }
+    
+    func filtroDefuntiPerData(da: Date, a: Date) -> [PersonaDefunta] {
+        return defunti.filter { defunto in
+            defunto.dataDecesso >= da && defunto.dataDecesso <= a
+        }
+    }
+    
+    func filtroDefuntiPerTipoSepoltura(_ tipo: TipologiaSepoltura) -> [PersonaDefunta] {
+        return defunti.filter { $0.tipoSepoltura == tipo }
+    }
+    
+    // MARK: - Export Functions
+    
+    func esportaCSV() throws -> URL {
+        let fileName = "defunti_export_\(Date().timeIntervalSince1970).csv"
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let fileURL = documentsPath.appendingPathComponent(fileName)
+        
+        var csvContent = "Nome,Cognome,Codice Fiscale,Data Nascita,Data Decesso,Luogo Nascita,Tipo Sepoltura,Telefono Familiare\n"
+        
+        for defunto in defunti {
+            let row = [
+                defunto.nome,
+                defunto.cognome,
+                defunto.codiceFiscale,
+                defunto.dataNascitaFormattata,
+                defunto.dataDecesoFormattata,
+                defunto.luogoNascita,
+                defunto.tipoSepoltura.rawValue,
+                defunto.familiareRichiedente.telefono
+            ].joined(separator: ",")
+            
+            csvContent += row + "\n"
+        }
+        
+        try csvContent.write(to: fileURL, atomically: true, encoding: .utf8)
+        return fileURL
+    }
+    
+    // MARK: - Sample Data Generation
+    
+    private func generateSampleData() {
+        let sampleDefunti: [PersonaDefunta] = [
+            createSampleDefunto(nome: "Mario", cognome: "Rossi", eta: 75),
+            createSampleDefunto(nome: "Anna", cognome: "Verdi", eta: 68),
+            createSampleDefunto(nome: "Giuseppe", cognome: "Bianchi", eta: 82),
+            createSampleDefunto(nome: "Maria", cognome: "Neri", eta: 71),
+            createSampleDefunto(nome: "Francesco", cognome: "Ferrari", eta: 79)
+        ]
+        
+        defunti.append(contentsOf: sampleDefunti)
+    }
+    
+    private func createSampleDefunto(nome: String, cognome: String, eta: Int) -> PersonaDefunta {
+        let birthDate = Calendar.current.date(byAdding: .year, value: -eta, to: Date())!
+        let deathDate = Calendar.current.date(byAdding: .day, value: -Int.random(in: 1...30), to: Date())!
+        
+        var defunto = PersonaDefunta(
+            numeroCartella: generaNuovoNumeroCartella(),
+            nome: nome,
+            cognome: cognome,
+            operatoreCorrente: "Sistema"
+        )
+        
+        defunto.dataNascita = birthDate
+        defunto.dataDecesso = deathDate
+        defunto.luogoNascita = ["Roma", "Milano", "Napoli", "Torino", "Palermo"].randomElement()!
+        defunto.sesso = Bool.random() ? .maschio : .femmina
+        
+        // Usa il CalcolatoreCodiceFiscaleItaliano esterno (definito nel file separato)
+        defunto.codiceFiscale = CalcolatoreCodiceFiscaleItaliano.calcola(
+            nome: nome,
+            cognome: cognome,
+            dataNascita: birthDate,
+            luogoNascita: defunto.luogoNascita,
+            sesso: defunto.sesso
+        )
+        
+        defunto.oraDecesso = String(format: "%02d:%02d", Int.random(in: 0...23), Int.random(in: 0...59))
+        defunto.tipoSepoltura = TipologiaSepoltura.allCases.randomElement()!
+        defunto.luogoSepoltura = "Cimitero Comunale"
+        
+        // Familiare
+        defunto.familiareRichiedente.nome = ["Marco", "Luca", "Andrea", "Giulia", "Sara"].randomElement()!
+        defunto.familiareRichiedente.cognome = cognome
+        defunto.familiareRichiedente.telefono = "+39 33\(Int.random(in: 10...99)) \(Int.random(in: 100...999)) \(Int.random(in: 1000...9999))"
+        defunto.familiareRichiedente.parentela = .figlio
+        
+        if Bool.random() {
+            defunto.familiareRichiedente.email = "\(defunto.familiareRichiedente.nome.lowercased())@email.com"
+        }
+        
+        return defunto
+    }
+}
+
+// MARK: - Supporting Types (versione semplificata)
+
+struct DefuntiStatistics {
+    let totalDefunti: Int
+    let cremazioni: Int
+    let tumulazioni: Int
+    let inumazioni: Int
+    let defuntiOggi: Int
+    let defuntiSettimana: Int
+    let etaMedia: Double
+    let qualitaDatiPercentuale: Int
+}
+
+// MARK: - Extensions
+
+extension DateFormatter {
+    static let shortDate: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM"
-        
-        let grouped = Dictionary(grouping: defunti) { defunto in
-            formatter.string(from: defunto.dataDecesso)
-        }
-        
-        return grouped.mapValues { $0.count }
-    }
-    
-    func getEtaMedia() -> Double {
-        guard !defunti.isEmpty else { return 0 }
-        let totaleEta = defunti.reduce(0) { $0 + $1.eta }
-        return Double(totaleEta) / Double(defunti.count)
-    }
-    
-    // MARK: - Persistenza
-    
-    private func caricaDefunti() {
-        if let data = userDefaults.data(forKey: defuntiKey),
-           let defuntiCaricati = try? JSONDecoder().decode([PersonaDefunta].self, from: data) {
-            self.defunti = defuntiCaricati
-        }
-    }
-    
-    private func salvaDefunti() {
-        do {
-            let data = try JSONEncoder().encode(defunti)
-            userDefaults.set(data, forKey: defuntiKey)
-        } catch {
-            errorMessage = "Errore nel salvataggio: \(error.localizedDescription)"
-        }
-    }
-    
-    private func aggiornaProssimoNumero() {
-        let numeroSalvato = userDefaults.integer(forKey: prossimoNumeroKey)
-        if numeroSalvato > 0 {
-            prossimoNumero = numeroSalvato
-        } else if let ultimoNumero = defunti.compactMap({ Int($0.numeroCartella) }).max() {
-            prossimoNumero = ultimoNumero + 1
-        }
-    }
-    
-    private func salvaProssimoNumero() {
-        userDefaults.set(prossimoNumero, forKey: prossimoNumeroKey)
-    }
-    
-    // MARK: - Utilità per l'export
-    
-    func esportaCSV() -> String {
-        return ExportUtilities.exportToCSV(defunti: defunti)
-    }
-    
-    func esportaTXT() -> String {
-        return ExportUtilities.exportToTXT(defunti: defunti)
-    }
-    
-    // MARK: - Validazione
-    
-    func validaDefunto(_ defunto: PersonaDefunta) -> [String] {
-        var errori: [String] = []
-        
-        if defunto.nome.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("Il nome è obbligatorio")
-        }
-        
-        if defunto.cognome.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("Il cognome è obbligatorio")
-        }
-        
-        if defunto.luogoNascita.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("Il luogo di nascita è obbligatorio")
-        }
-        
-        if defunto.oraDecesso.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("L'ora del decesso è obbligatoria")
-        }
-        
-        if defunto.documentoRiconoscimento.numero.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("Il numero del documento è obbligatorio")
-        }
-        
-        if defunto.luogoSepoltura.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("Il luogo di sepoltura è obbligatorio")
-        }
-        
-        if defunto.familiareRichiedente.nome.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("Il nome del familiare responsabile è obbligatorio")
-        }
-        
-        if defunto.familiareRichiedente.telefono.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
-            errori.append("Il telefono del familiare responsabile è obbligatorio")
-        }
-        
-        return errori
-    }
-    
-    func esisteNumeroCartella(_ numero: String) -> Bool {
-        return defunti.contains { $0.numeroCartella == numero }
-    }
+        formatter.dateStyle = .short
+        formatter.locale = Locale(identifier: "it_IT")
+        return formatter
+    }()
 }

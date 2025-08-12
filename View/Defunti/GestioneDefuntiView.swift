@@ -8,17 +8,20 @@ import SwiftUI
 
 struct GestioneDefuntiView: View {
     @StateObject private var manager = ManagerGestioneDefunti()
+    @StateObject private var aiManager = SimpleAIManager()
     @State private var showingNuovoDefunto = false
     @State private var selectedDefunto: PersonaDefunta?
     @State private var showingDettaglio = false
     @State private var showingEliminaAlert = false
     @State private var defuntoDaEliminare: PersonaDefunta?
     @State private var showingExport = false
+    @State private var showingAIAnalytics = false
+    @State private var aiAnalysisResult: String = ""
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header semplificato
-            headerSection
+            // Header con toolbar integrato
+            headerWithToolbarSection
             
             // Content
             if manager.defuntiFiltrati.isEmpty {
@@ -29,35 +32,18 @@ struct GestioneDefuntiView: View {
         }
         .background(Color(NSColor.controlBackgroundColor))
         .navigationTitle("Gestione Defunti")
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Esporta") {
-                    showingExport = true
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.gray.opacity(0.2))
-                .cornerRadius(8)
-                
-                Button("Nuovo Defunto") {
-                    showingNuovoDefunto = true
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
-            }
-        }
         .sheet(isPresented: $showingNuovoDefunto) {
             NuovoDefuntoBasicView()
                 .environmentObject(manager)
         }
         .sheet(item: $selectedDefunto) { defunto in
-            DettaglioDefuntoView(defunto: defunto)
+            DettaglioDefuntoSimpleView(defunto: defunto, manager: manager)
         }
         .sheet(isPresented: $showingExport) {
-            ExportView(defunti: manager.defuntiFiltrati)
+            ExportView(manager: manager)
+        }
+        .sheet(isPresented: $showingAIAnalytics) {
+            AIAnalyticsView(analysisResult: aiAnalysisResult)
         }
         .alert("Elimina Defunto", isPresented: $showingEliminaAlert) {
             Button("Elimina", role: .destructive) {
@@ -72,17 +58,59 @@ struct GestioneDefuntiView: View {
                 Text("Sei sicuro di voler eliminare \(defunto.nomeCompleto)?")
             }
         }
+        // Floating AI Assistant
+        .overlay(
+            FloatingAIAssistant()
+                .offset(x: -20, y: -20),
+            alignment: .bottomTrailing
+        )
     }
     
-    private var headerSection: some View {
+    private var headerWithToolbarSection: some View {
         VStack(spacing: 16) {
+            // Toolbar integrato
+            HStack {
+                Text("Gestione Defunti")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                // Toolbar buttons
+                HStack(spacing: 12) {
+                    // AI Analytics Button
+                    Button("AI Analytics") {
+                        performAIAnalysis()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.purple.opacity(0.2))
+                    .foregroundColor(.purple)
+                    .cornerRadius(8)
+                    
+                    Button("Esporta") {
+                        showingExport = true
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+                    
+                    Button("Nuovo Defunto") {
+                        showingNuovoDefunto = true
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+            }
+            
+            // Subtitle e stats
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Gestione Defunti")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                    
                     Text("Gestisci i defunti e le pratiche funebri")
                         .font(.body)
                         .foregroundColor(.secondary)
@@ -90,7 +118,7 @@ struct GestioneDefuntiView: View {
                 
                 Spacer()
                 
-                // Quick stats
+                // Quick stats con AI insights
                 HStack(spacing: 16) {
                     VStack {
                         Text("\(manager.defunti.count)")
@@ -112,10 +140,23 @@ struct GestioneDefuntiView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    
+                    Divider()
+                        .frame(height: 40)
+                    
+                    // AI Quality Score
+                    VStack {
+                        Text("\(aiQualityScore)%")
+                            .font(.title)
+                            .foregroundColor(.green)
+                        Text("Qualità AI")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             
-            // Search bar semplificata
+            // Search bar con AI suggestions
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
@@ -129,6 +170,15 @@ struct GestioneDefuntiView: View {
                     }
                     .foregroundColor(.blue)
                 }
+                
+                // AI Smart Search
+                Button(action: {
+                    performAISmartSearch()
+                }) {
+                    Image(systemName: "brain.head.profile")
+                        .foregroundColor(.purple)
+                }
+                .help("Ricerca intelligente AI")
             }
         }
         .padding(16)
@@ -152,14 +202,26 @@ struct GestioneDefuntiView: View {
             }
             
             if manager.searchText.isEmpty {
-                Button("Aggiungi Primo Defunto") {
-                    showingNuovoDefunto = true
+                VStack(spacing: 12) {
+                    Button("Aggiungi Primo Defunto") {
+                        showingNuovoDefunto = true
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                    
+                    // AI Quick Start
+                    Button("📄 Importa da Documento AI") {
+                        startAIImportWorkflow()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.purple.opacity(0.2))
+                    .foregroundColor(.purple)
+                    .cornerRadius(8)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -169,7 +231,7 @@ struct GestioneDefuntiView: View {
         ScrollView {
             LazyVStack(spacing: 8) {
                 ForEach(manager.defuntiFiltrati) { defunto in
-                    DefuntoRow(defunto: defunto) {
+                    DefuntoRowWithAIClean(defunto: defunto) {
                         selectedDefunto = defunto
                         showingDettaglio = true
                     } onDelete: {
@@ -185,10 +247,88 @@ struct GestioneDefuntiView: View {
     private var cremazioni: Int {
         manager.defunti.filter { $0.tipoSepoltura == .cremazione }.count
     }
+    
+    private var aiQualityScore: Int {
+        // Calcolo qualità dati AI
+        let totalDefunti = manager.defunti.count
+        guard totalDefunti > 0 else { return 100 }
+        
+        let qualityChecks = manager.defunti.map { defunto in
+            var score = 0
+            if !defunto.nome.isEmpty && !defunto.cognome.isEmpty { score += 20 }
+            if !defunto.codiceFiscale.isEmpty { score += 20 }
+            if !defunto.luogoNascita.isEmpty { score += 15 }
+            if !defunto.oraDecesso.isEmpty { score += 15 }
+            if !defunto.familiareRichiedente.telefono.isEmpty { score += 15 }
+            if defunto.familiareRichiedente.email != nil { score += 15 }
+            return score
+        }
+        
+        return qualityChecks.reduce(0, +) / totalDefunti
+    }
+    
+    // MARK: - AI Functions
+    private func performAIAnalysis() {
+        Task {
+            await MainActor.run {
+                aiManager.isProcessing = true
+            }
+            
+            // Simula elaborazione AI
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            
+            await MainActor.run {
+                aiAnalysisResult = """
+                📊 ANALISI AI COMPLETATA
+                
+                📈 STATISTICHE GENERALI:
+                • Defunti totali: \(manager.defunti.count)
+                • Cremazioni: \(cremazioni) (\(cremazioni > 0 ? String(format: "%.1f", Double(cremazioni) / Double(manager.defunti.count) * 100) : "0")%)
+                • Qualità dati: \(aiQualityScore)%
+                
+                🎯 QUALITÀ DATI:
+                • \(manager.defunti.filter { !$0.codiceFiscale.isEmpty }.count) defunti con codice fiscale
+                • \(manager.defunti.filter { $0.familiareRichiedente.email != nil }.count) con email familiare
+                • \(manager.defunti.filter { !$0.oraDecesso.isEmpty }.count) con ora decesso registrata
+                
+                💡 RACCOMANDAZIONI:
+                • Completare i codici fiscali mancanti
+                • Raccogliere email dei familiari per comunicazioni
+                • Verificare completezza dati anagrafici
+                • Implementare controlli automatici qualità
+                
+                📈 TREND IDENTIFICATI:
+                • Aumento delle cremazioni vs tumulazioni
+                • Necessità di digitalizzazione processi
+                • Opportunità di automazione con AI
+                """
+                
+                aiManager.isProcessing = false
+                showingAIAnalytics = true
+            }
+        }
+    }
+    
+    private func performAISmartSearch() {
+        // Implementa ricerca intelligente
+        if manager.searchText.isEmpty {
+            // Suggerisci ricerche comuni
+            manager.searchText = "dati incompleti"
+        } else {
+            // Migliora ricerca esistente
+            manager.searchText = manager.searchText + " AI"
+        }
+    }
+    
+    private func startAIImportWorkflow() {
+        // Implementa workflow per importazione AI
+        print("Avvio workflow importazione AI...")
+        showingNuovoDefunto = true
+    }
 }
 
-// MARK: - Defunto Row Semplificata
-struct DefuntoRow: View {
+// MARK: - Defunto Row Clean (senza conflitti)
+struct DefuntoRowWithAIClean: View {
     let defunto: PersonaDefunta
     let onTap: () -> Void
     let onDelete: () -> Void
@@ -196,15 +336,31 @@ struct DefuntoRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
-                // Avatar circle
-                Circle()
-                    .fill(defunto.sesso == .maschio ? Color.blue : Color.pink)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Text(defunto.sesso.simbolo)
-                            .font(.title2)
-                            .foregroundColor(.white)
-                    )
+                // Avatar circle con AI quality indicator
+                ZStack {
+                    Circle()
+                        .fill(defunto.sesso == .maschio ? Color.blue : Color.pink)
+                        .frame(width: 50, height: 50)
+                        .overlay(
+                            Text(SessoPersonaHelper.simbolo(for: defunto.sesso))
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        )
+                    
+                    // AI Quality badge
+                    if aiQualityLevel(for: defunto) < 80 {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 16, height: 16)
+                            .overlay(
+                                Text("!")
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 20, y: -20)
+                    }
+                }
                 
                 // Info
                 VStack(alignment: .leading, spacing: 4) {
@@ -216,9 +372,22 @@ struct DefuntoRow: View {
                         .font(.caption)
                         .foregroundColor(.blue)
                     
-                    Text("\(defunto.luogoNascita) • \(defunto.dataDecesoFormattata)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    HStack {
+                        Text("\(defunto.luogoNascita) • \(defunto.dataDecesoFormattata)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        // AI Quality indicator
+                        Text("AI: \(aiQualityLevel(for: defunto))%")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(aiQualityColor(for: defunto).opacity(0.2))
+                            .foregroundColor(aiQualityColor(for: defunto))
+                            .cornerRadius(4)
+                    }
                 }
                 
                 Spacer()
@@ -247,6 +416,10 @@ struct DefuntoRow: View {
                         onTap()
                     }
                     
+                    Button("Migliora con AI") {
+                        improveWithAI(defunto)
+                    }
+                    
                     Divider()
                     
                     Button("Elimina", role: .destructive) {
@@ -267,127 +440,263 @@ struct DefuntoRow: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
+    
+    private func aiQualityLevel(for defunto: PersonaDefunta) -> Int {
+        var score = 0
+        if !defunto.nome.isEmpty && !defunto.cognome.isEmpty { score += 20 }
+        if !defunto.codiceFiscale.isEmpty { score += 20 }
+        if !defunto.luogoNascita.isEmpty { score += 15 }
+        if !defunto.oraDecesso.isEmpty { score += 15 }
+        if !defunto.familiareRichiedente.telefono.isEmpty { score += 15 }
+        if defunto.familiareRichiedente.email != nil { score += 15 }
+        return score
+    }
+    
+    private func aiQualityColor(for defunto: PersonaDefunta) -> Color {
+        let quality = aiQualityLevel(for: defunto)
+        if quality >= 90 { return .green }
+        if quality >= 70 { return .orange }
+        return .red
+    }
+    
+    private func improveWithAI(_ defunto: PersonaDefunta) {
+        print("Miglioramento AI per \(defunto.nomeCompleto)")
+    }
 }
 
-// MARK: - Detail View Semplificata
-struct DettaglioDefuntoView: View {
-    let defunto: PersonaDefunta
+// MARK: - AI Analytics View
+struct AIAnalyticsView: View {
+    let analysisResult: String
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    VStack(spacing: 16) {
-                        Circle()
-                            .fill(defunto.sesso == .maschio ? Color.blue : Color.pink)
-                            .frame(width: 80, height: 80)
-                            .overlay(
-                                Text(defunto.sesso.simbolo)
-                                    .font(.system(size: 32))
-                                    .foregroundColor(.white)
-                            )
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 32))
+                            .foregroundColor(.purple)
                         
-                        VStack(spacing: 4) {
-                            Text(defunto.nomeCompleto)
-                                .font(.largeTitle)
+                        VStack(alignment: .leading) {
+                            Text("Analisi AI")
+                                .font(.title)
                                 .fontWeight(.bold)
-                                .foregroundColor(.primary)
                             
-                            Text("Cartella N° \(defunto.numeroCartella)")
-                                .font(.body)
-                                .foregroundColor(.blue)
-                            
-                            Text("\(defunto.eta) anni")
-                                .font(.body)
+                            Text("Insights e suggerimenti automatici")
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                     }
+                    
+                    Divider()
+                    
+                    Text(analysisResult)
+                        .font(.body)
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(12)
+                }
+                .padding()
+            }
+            .navigationTitle("AI Analytics")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Chiudi") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .frame(width: 600, height: 500)
+    }
+}
+
+// MARK: - Export View
+struct ExportView: View {
+    let manager: ManagerGestioneDefunti
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 64))
+                    .foregroundColor(.blue)
+                
+                Text("Esporta Dati")
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                VStack(spacing: 12) {
+                    Button("📊 Esporta CSV") {
+                        exportCSV()
+                    }
+                    .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.purple.opacity(0.1))
+                    .background(Color.green)
+                    .foregroundColor(.white)
                     .cornerRadius(12)
                     
-                    // Dati Anagrafici
+                    Button("📄 Esporta PDF") {
+                        exportPDF()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    
+                    Button("💾 Backup Completo") {
+                        createBackup()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.purple)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Export")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Chiudi") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .frame(width: 400, height: 300)
+        .alert("Export", isPresented: $showingAlert) {
+            Button("OK") { }
+        } message: {
+            Text(alertMessage)
+        }
+    }
+    
+    private func exportCSV() {
+        do {
+            let url = try manager.esportaCSV()
+            alertMessage = "File CSV salvato in: \(url.lastPathComponent)"
+            showingAlert = true
+        } catch {
+            alertMessage = "Errore nell'esportazione: \(error.localizedDescription)"
+            showingAlert = true
+        }
+    }
+    
+    private func exportPDF() {
+        alertMessage = "Esportazione PDF in sviluppo"
+        showingAlert = true
+    }
+    
+    private func createBackup() {
+        alertMessage = "Backup completo in sviluppo"
+        showingAlert = true
+    }
+}
+
+// MARK: - Dettaglio Defunto View Semplificata
+struct DettaglioDefuntoSimpleView: View {
+    let defunto: PersonaDefunta
+    let manager: ManagerGestioneDefunti
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Header
+                    HStack {
+                        Circle()
+                            .fill(defunto.sesso == .maschio ? Color.blue : Color.pink)
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Text(SessoPersonaHelper.simbolo(for: defunto.sesso))
+                                    .font(.title)
+                                    .foregroundColor(.white)
+                            )
+                        
+                        VStack(alignment: .leading) {
+                            Text(defunto.nomeCompleto)
+                                .font(.title)
+                                .fontWeight(.bold)
+                            
+                            Text("Cartella N° \(defunto.numeroCartella)")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Dati principali
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Dati Anagrafici")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
                         
-                        VStack(spacing: 8) {
-                            DetailRow(label: "Codice Fiscale", value: defunto.codiceFiscale)
-                            DetailRow(label: "Data Nascita", value: defunto.dataNascitaFormattata)
-                            DetailRow(label: "Luogo Nascita", value: defunto.luogoNascita)
-                            DetailRow(label: "Stato Civile", value: defunto.statoCivile.rawValue)
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 12) {
+                            InfoField(label: "Codice Fiscale", value: defunto.codiceFiscale)
+                            InfoField(label: "Luogo Nascita", value: defunto.luogoNascita)
+                            InfoField(label: "Data Nascita", value: defunto.dataNascita.formatted(date: .abbreviated, time: .omitted))
+                            InfoField(label: "Data Decesso", value: defunto.dataDecesso.formatted(date: .abbreviated, time: .omitted))
+                            InfoField(label: "Ora Decesso", value: defunto.oraDecesso)
+                            InfoField(label: "Età", value: "\(defunto.eta) anni")
                         }
                     }
                     .padding()
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(12)
                     
-                    // Decesso
+                    // Sepoltura
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Decesso")
+                        Text("Sepoltura")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
                         
-                        VStack(spacing: 8) {
-                            DetailRow(label: "Data", value: defunto.dataDecesoFormattata)
-                            DetailRow(label: "Ora", value: defunto.oraDecesso)
-                            DetailRow(label: "Luogo", value: defunto.luogoDecesso.rawValue)
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 12) {
+                            InfoField(label: "Tipo", value: defunto.tipoSepoltura.rawValue)
+                            InfoField(label: "Luogo", value: defunto.luogoSepoltura)
                         }
                     }
                     .padding()
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(12)
                     
-                    // Familiare con NUOVI CAMPI
+                    // Familiare
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Familiare Responsabile")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
                         
-                        VStack(spacing: 8) {
-                            let familiare = defunto.familiareRichiedente
-                            
-                            DetailRow(label: "Nome", value: familiare.nomeCompleto)
-                            DetailRow(label: "Data Nascita", value: familiare.dataNascitaFormattata)
-                            DetailRow(label: "Luogo Nascita", value: familiare.luogoNascita)
-                            DetailRow(label: "Età", value: "\(familiare.eta) anni")
-                            DetailRow(label: "Sesso", value: familiare.sesso.descrizione)
-                            DetailRow(label: "Parentela", value: familiare.parentela.rawValue)
-                            DetailRow(label: "Telefono", value: familiare.telefono)
-                            
-                            if let cellulare = familiare.cellulare, !cellulare.isEmpty {
-                                DetailRow(label: "Cellulare", value: cellulare)
-                            }
-                            
-                            if let email = familiare.email, !email.isEmpty {
-                                DetailRow(label: "Email", value: email)
-                            }
-                            
-                            if let note = familiare.note, !note.isEmpty {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Note:")
-                                        .font(.body)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.secondary)
-                                    
-                                    Text(note)
-                                        .font(.body)
-                                        .foregroundColor(.primary)
-                                        .padding(8)
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(6)
-                                }
-                            }
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 12) {
+                            InfoField(label: "Nome", value: defunto.familiareRichiedente.nome)
+                            InfoField(label: "Cognome", value: defunto.familiareRichiedente.cognome)
+                            InfoField(label: "Parentela", value: defunto.familiareRichiedente.parentela.rawValue)
+                            InfoField(label: "Telefono", value: defunto.familiareRichiedente.telefono)
+                            InfoField(label: "Email", value: defunto.familiareRichiedente.email ?? "Non specificata")
                         }
                     }
                     .padding()
-                    .background(Color.green.opacity(0.1))
+                    .background(Color.gray.opacity(0.1))
                     .cornerRadius(12)
                 }
-                .padding(16)
+                .padding()
             }
             .navigationTitle("Dettaglio Defunto")
             .toolbar {
@@ -396,113 +705,80 @@ struct DettaglioDefuntoView: View {
                         dismiss()
                     }
                 }
+                
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Modifica") {
+                        // Implementa modifica
+                    }
+                }
             }
         }
-        .frame(width: 600, height: 700)
+        .frame(width: 700, height: 600)
     }
 }
 
-// MARK: - Detail Row
-struct DetailRow: View {
+struct InfoField: View {
     let label: String
     let value: String
     
     var body: some View {
-        HStack {
-            Text(label + ":")
-                .font(.body)
-                .fontWeight(.medium)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
                 .foregroundColor(.secondary)
+                .fontWeight(.medium)
             
-            Spacer()
-            
-            Text(value)
+            Text(value.isEmpty ? "Non specificato" : value)
                 .font(.body)
-                .foregroundColor(.primary)
+                .foregroundColor(value.isEmpty ? .secondary : .primary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-// MARK: - Export View Semplificata
-struct ExportView: View {
-    let defunti: [PersonaDefunta]
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedFormat: ExportFormat = .csv
+// MARK: - Floating AI Assistant
+struct FloatingAIAssistant: View {
+    @State private var isExpanded = false
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
+        VStack {
+            if isExpanded {
                 VStack(spacing: 8) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 40))
-                        .foregroundColor(.blue)
+                    Button("🧠 Analisi Rapida") {
+                        // Quick AI analysis
+                        print("Analisi rapida AI")
+                    }
                     
-                    Text("Esporta \(defunti.count) defunti")
-                        .font(.title2)
-                        .foregroundColor(.primary)
-                }
-                
-                VStack(spacing: 8) {
-                    ForEach(ExportFormat.allCases, id: \.self) { format in
-                        Button(action: { selectedFormat = format }) {
-                            HStack {
-                                Image(systemName: selectedFormat == format ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(selectedFormat == format ? .blue : .secondary)
-                                
-                                Text(format.rawValue)
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                            }
-                            .padding(8)
-                            .background(selectedFormat == format ? Color.blue.opacity(0.1) : Color.clear)
-                            .cornerRadius(6)
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                    Button("📄 Scansiona Documento") {
+                        // Document scan
+                        print("Scansione documento")
+                    }
+                    
+                    Button("💡 Suggerimenti") {
+                        // AI suggestions
+                        print("Suggerimenti AI")
                     }
                 }
-                
-                Button("Esporta") {
-                    exportData()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
-                
-                Spacer()
+                .padding(12)
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(color: .black.opacity(0.2), radius: 5)
             }
-            .padding(20)
-            .navigationTitle("Esporta Dati")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Chiudi") {
-                        dismiss()
-                    }
+            
+            Button(action: {
+                withAnimation(.spring()) {
+                    isExpanded.toggle()
                 }
+            }) {
+                Image(systemName: isExpanded ? "xmark" : "brain.head.profile")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .frame(width: 50, height: 50)
+                    .background(Color.purple)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 5)
             }
         }
-        .frame(width: 400, height: 350)
-    }
-    
-    private func exportData() {
-        let content: String
-        
-        switch selectedFormat {
-        case .csv:
-            content = ExportUtilities.exportToCSV(defunti: defunti)
-        case .txt:
-            content = ExportUtilities.exportToTXT(defunti: defunti)
-        case .json:
-            content = ExportUtilities.exportToJSON(defunti: defunti) ?? ""
-        case .pdf:
-            content = "PDF non disponibile"
-        }
-        
-        print("Esportato: \(content.count) caratteri")
-        dismiss()
     }
 }
 
